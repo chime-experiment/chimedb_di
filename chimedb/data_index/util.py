@@ -13,7 +13,6 @@ Routines
     :toctree: generated/
 
     detect_file_type
-    files_in_range
     md5sum_file
     parse_acq_name
     parse_corrfile_name
@@ -59,7 +58,7 @@ _fmt_calib_data = re.compile(r"\d{8}\.h5")
 
 
 # Routines for setting up the database
-#=====================================
+# ====================================
 
 def populate_types():
     """Populate the AcqType, FileType and StorageGroup tables with standard
@@ -77,70 +76,6 @@ def populate_types():
     for g in ["collection_server"]:
         if not orm.StorageGroup.select().where(orm.StorageGroup.name == g).count():
             orm.StorageGroup.insert(name = g).execute()
-
-
-# Query routines
-# ==============
-
-def files_in_range(acq, start_time, end_time, node_list, extra_cond = None,
-                   node_spoof = None):
-    """Get files for a given acquisition within a time range.
-
-    Parameters
-    ----------
-    acq : string or int
-        Which acquisition, by its name or id key.
-    start_time : float
-        POSIX/Unix time for the start or time range.
-    end_time : float
-        POSIX/Unix time for the end or time range.
-    node_list : list of StorageNode
-        Only return files residing on the given nodes.
-    extra_cond : :mod:`peewee` comparison
-        Any additional expression for filtering files.
-
-    Returns
-    -------
-    file_names : list of strings
-        List of filenames, including the full path.
-
-    """
-
-    if isinstance(acq, basestring):
-        acq_name = acq
-        acq = orm.ArchiveAcq.get(ArchiveAcq.name == acq).acq
-    else:
-        acq_name = orm.ArchiveAcq.get(ArchiveAcq.id == acq).name
-
-    cond = ((orm.ArchiveFile.acq == acq) &
-            (orm.ArchiveFileCopy.node << node_list) &
-            (orm.ArchiveFileCopy.has_file == 'Y'))
-    info_cond = False
-    for i in _file_info_table:
-        info_cond |= ((i.finish_time >= start_time) & \
-                      (i.start_time <= end_time))
-
-    if extra_cond:
-      cond &= extra_cond
-
-    query = orm.ArchiveFileCopy.select(orm.ArchiveFileCopy.node,
-            orm.ArchiveFile.name,
-            orm.StorageNode.root,
-            orm.StorageNode.name.alias("node_name")) \
-                    .join(orm.StorageNode) \
-                    .switch(orm.ArchiveFileCopy) \
-                    .join(orm.ArchiveFile)
-    for i in _file_info_table:
-        query = query.switch(orm.ArchiveFile) \
-                     .join(i, join_type = pw.JOIN_LEFT_OUTER)
-    query = query.where(cond & info_cond).naive()
-
-    if not node_spoof:
-      return [os.path.join(af.root, acq_name, af.name) for af in query]
-    else:
-      return [os.path.join(node_spoof[af.node_name], acq_name, af.name) \
-              for af in query]
-
 
 
 # Helper routines for adding files
