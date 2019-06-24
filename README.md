@@ -27,7 +27,6 @@ The table classes defined `orm` module include:
 
 The `util` module defines a few utility functions:
 * detect_file_type
-* files_in_range
 * md5sum_file
 * parse_acq_name
 * parse_corrfile_name
