@@ -3,7 +3,9 @@
 This package, built on top of [chimedb.core](https://github.com/chime-experiment/chimedb), defines the
 data index tables used by `alpenhorn` to track raw data files.
 
-The table classes defined `orm` module include:
+## Contents
+
+The table classes provided in `chimedb.data_index` are:
 * AcqType
 * ArchiveAcq
 * ArchiveFile
@@ -25,7 +27,10 @@ The table classes defined `orm` module include:
 * StorageNode
 * WeatherFileInfo
 
-The `util` module defines a few utility functions:
+The `chimedb.data_index.orm` module also defines:
+* file_info_table
+
+The `chimedb.data_index.util` module defines a few utility functions:
 * detect_file_type
 * md5sum_file
 * parse_acq_name
