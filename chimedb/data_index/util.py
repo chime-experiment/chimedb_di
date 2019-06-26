@@ -38,7 +38,6 @@ from . import orm
 # ================
 
 fname_atmel = "atmel_id.dat"
-fname_raw_settings = "settings.dat"
 
 _fmt_acq = re.compile("([0-9]{8})T([0-9]{6})Z_([A-Za-z0-9]*)_([A-Za-z]*)")
 _fmt_corr = re.compile("([0-9]{8})_([0-9]{4}).h5")
