@@ -49,9 +49,7 @@ _fmt_rawadc = re.compile("rawadc\.npy")
 _fmt_rawadc_hist = re.compile("histogram_chan([0-9]{1,2})\.pdf")
 _fmt_rawadc_spec = re.compile("spectrum_chan([0-9]{1,2})\.pdf")
 _fmt_rawadc_h5 = re.compile("[0-9]{6}.h5")
-_fmt_raw = re.compile("[0-9]{7}.dat")
 _fmt_raw_gains = re.compile("(gains|gains_noisy)\.pkl")
-_fmt_raw_settings = re.compile(fname_raw_settings)
 _fmt_weather = re.compile("(20[12][0-9][01][0-9][0123][0-9]).h5")
 _fmt_calib_data = re.compile(r"\d{8}\.h5")
 
@@ -222,12 +220,8 @@ def detect_file_type(name):
         return orm.FileType.get(name="rawadc")
     elif re.match(_fmt_rawadc_hist, name) or re.match(_fmt_rawadc_spec, name):
         return orm.FileType.get(name="pdf")
-    elif re.match(_fmt_raw, name):
-        return orm.FileType.get(name="raw")
     elif re.match(_fmt_raw_gains, name):
         return orm.FileType.get(name="pkl")
-    elif re.match(_fmt_raw_settings, name):
-        return orm.FileType.get(name="ini")
     elif re.match(_fmt_weather, name):
         return orm.FileType.get(name="weather")
     elif re.match(_fmt_calib_data, name):
