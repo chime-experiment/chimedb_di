@@ -20,6 +20,25 @@ _logger = logging.getLogger("chimedb")
 _logger.addHandler(logging.NullHandler())
 
 
+# Generic function for caching queries
+# ====================================
+_query_cache = dict()
+
+def _get_query_cache(cls, field, val):
+    if val is None:
+        return None
+    tag = "%s_%s" % (cls.__name__, field)
+    try:
+        _query_cache[tag]
+    except KeyError:
+        _query_cache[tag] = dict()
+    try:
+        return _query_cache[tag][val]
+    except KeyError:
+        _query_cache[tag][val] = cls.get(**{field: val})
+        return _query_cache[tag][val]
+
+
 # Tables pertaining to the data index.
 # ====================================
 
