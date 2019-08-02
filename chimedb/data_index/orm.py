@@ -8,7 +8,7 @@ from future.builtins import *  # noqa  pylint: disable=W0401, W0614
 from future.builtins.disabled import *  # noqa  pylint: disable=W0401, W0614
 # === End Python 2/3 compatibility
 
-from chimedb.core.orm import base_model, EnumField
+from chimedb.core.orm import base_model, name_table, EnumField
 
 import peewee as pw
 
@@ -18,25 +18,6 @@ import peewee as pw
 import logging
 _logger = logging.getLogger("chimedb")
 _logger.addHandler(logging.NullHandler())
-
-
-# Generic function for caching queries
-# ====================================
-_query_cache = dict()
-
-def _get_query_cache(cls, field, val):
-    if val is None:
-        return None
-    tag = "%s_%s" % (cls.__name__, field)
-    try:
-        _query_cache[tag]
-    except KeyError:
-        _query_cache[tag] = dict()
-    try:
-        return _query_cache[tag][val]
-    except KeyError:
-        _query_cache[tag][val] = cls.get(**{field: val})
-        return _query_cache[tag][val]
 
 
 # Tables pertaining to the data index.
@@ -54,7 +35,7 @@ class ArchiveInst(base_model):
     notes = pw.TextField(null=True)
 
 
-class AcqType(base_model):
+class AcqType(name_table):
     """The type of data that is being taken in the acquisition.
 
     Attributes
@@ -68,42 +49,37 @@ class AcqType(base_model):
     @classmethod
     def corr(cls):
         """For getting the correlator acquisition type."""
-        return _get_query_cache(cls, "name", "corr")
+        return cls.from_name("corr")
 
     @classmethod
     def hk(cls):
         """For getting the housekeeping acquisition type."""
-        return _get_query_cache(cls, "name", "hk")
+        return cls.from_name("hk")
 
     @classmethod
     def weather(cls):
         """For getting the weather acquisition type."""
-        return _get_query_cache(cls, "name", "weather")
-
-    @classmethod
-    def raw(cls):
-        """For getting the raw acquisition type."""
-        return _get_query_cache(cls, "name", "raw")
+        return cls.from_name("weather")
 
     @classmethod
     def rawadc(cls):
         """For getting the rawadc acquisition type."""
-        return _get_query_cache(cls, "name", "rawadc")
+        return cls.from_name("rawadc")
 
     @classmethod
     def gain(cls):
         """For getting the calibrationgain acquisition type."""
-        return _get_query_cache(cls, "name", "gain")
+        return cls.from_name("gain")
 
     @classmethod
     def flaginput(cls):
         """For getting the flaginput acquisition type."""
-        return _get_query_cache(cls, "name", "flaginput")
+        return cls.from_name("flaginput")
 
     @classmethod
     def digitalgain(cls):
         """For getting the digitalgain acquisition type."""
-        return _get_query_cache(cls, "name", "digitalgain")
+        return cls.from_name("digitalgain")
 
 
 
