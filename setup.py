@@ -24,7 +24,7 @@ setup(
 
     install_requires=[
         'chimedb @ git+ssh://git@github.com/chime-experiment/chimedb.git',
-        'peewee < 3', 'future'
+        'peewee >= 3.10', 'future'
     ],
 
     author="CHIME collaboration",
