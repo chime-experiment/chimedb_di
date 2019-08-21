@@ -102,8 +102,8 @@ class ArchiveAcq(base_model):
     n_timed_files
     """
     name = pw.CharField(max_length=64)
-    inst = pw.ForeignKeyField(ArchiveInst, related_name='acqs')
-    type = pw.ForeignKeyField(AcqType, related_name='acqs')
+    inst = pw.ForeignKeyField(ArchiveInst, backref='acqs')
+    type = pw.ForeignKeyField(AcqType, backref='acqs')
     comment = pw.TextField(null=True)
 
     @property
@@ -135,16 +135,16 @@ class ArchiveAcq(base_model):
     def finish_time(self):
         finish = -1e99
         for model in file_info_table:
-            this_finish = self.files.join(model).aggregate(pw.fn.Max(model.finish_time)) or -1e99
-            finish = max(finish, this_finish)
+            this_finish = self.files.select(pw.fn.Max(model.finish_time)).join(model).scalar()
+            finish = max(finish, this_finish or -1e99)
         return finish
 
     @property
     def start_time(self):
         start = 1e99
         for model in file_info_table:
-            this_start = self.files.join(model).aggregate(pw.fn.Min(model.start_time)) or 1e99
-            start = min(start, this_start)
+            this_start = self.files.select(pw.fn.Min(model.start_time)).join(model).scalar()
+            start = min(start, this_start or 1e99)
         return start
 
 
@@ -163,7 +163,7 @@ class CorrAcqInfo(base_model):
         Number of correlation products in acquisition.
 
     """
-    acq = pw.ForeignKeyField(ArchiveAcq, related_name='corrinfos')
+    acq = pw.ForeignKeyField(ArchiveAcq, backref='corrinfos')
     integration = pw.DoubleField(null=True)
     nfreq = pw.IntegerField(null=True)
     nprod = pw.IntegerField(null=True)
@@ -182,7 +182,7 @@ class HKAcqInfo(base_model):
     atmel_name : string
            The human-readable name of the ATMEL board.
     """
-    acq = pw.ForeignKeyField(ArchiveAcq, related_name='hkinfos')
+    acq = pw.ForeignKeyField(ArchiveAcq, backref='hkinfos')
     atmel_id = pw.CharField(max_length=64)
     atmel_name = pw.CharField(max_length=64)
 
@@ -197,7 +197,7 @@ class RawadcAcqInfo(base_model):
     start_time : double
            When the raw ADC acquisition was performed, in UNIX time.
     """
-    acq = pw.ForeignKeyField(ArchiveAcq, related_name='rawadcinfos')
+    acq = pw.ForeignKeyField(ArchiveAcq, backref='rawadcinfos')
     start_time = pw.DoubleField(null=True)
 
 
@@ -231,8 +231,8 @@ class ArchiveFile(base_model):
     md5sum : string
         md5 checksum of file. Used for verifying integrity.
     """
-    acq = pw.ForeignKeyField(ArchiveAcq, related_name='files')
-    type = pw.ForeignKeyField(FileType, related_name='files')
+    acq = pw.ForeignKeyField(ArchiveAcq, backref='files')
+    type = pw.ForeignKeyField(FileType, backref='files')
     name = pw.CharField(max_length=64)
     size_b = pw.BigIntegerField(null=True)
     md5sum = pw.CharField(null=True, max_length=32)
@@ -254,7 +254,7 @@ class CorrFileInfo(base_model):
     finish_time : float
         End of acquisition in UNIX time.
     """
-    file = pw.ForeignKeyField(ArchiveFile, related_name='corrinfos')
+    file = pw.ForeignKeyField(ArchiveFile, backref='corrinfos')
     start_time = pw.DoubleField(null=True)
     finish_time = pw.DoubleField(null=True)
     chunk_number = pw.IntegerField(null=True)
@@ -275,7 +275,7 @@ class HKFileInfo(base_model):
     finish_time : float
         End of acquisition in UNIX time.
     """
-    file = pw.ForeignKeyField(ArchiveFile, related_name='hkinfos')
+    file = pw.ForeignKeyField(ArchiveFile, backref='hkinfos')
     start_time = pw.DoubleField(null=True)
     finish_time = pw.DoubleField(null=True)
     atmel_name = pw.CharField(max_length=64)
@@ -296,7 +296,7 @@ class HKPFileInfo(base_model):
     finish_time : float
         End of acquisition in UNIX time.
     """
-    file = pw.ForeignKeyField(ArchiveFile, related_name='hkpinfos')
+    file = pw.ForeignKeyField(ArchiveFile, backref='hkpinfos')
     start_time = pw.DoubleField(null=True)
     finish_time = pw.DoubleField(null=True)
 
@@ -313,7 +313,7 @@ class DigitalGainFileInfo(base_model):
     finish_time : float
         End of data in the file in UNIX time.
     """
-    file = pw.ForeignKeyField(ArchiveFile, related_name='digitalgaininfos')
+    file = pw.ForeignKeyField(ArchiveFile, backref='digitalgaininfos')
     start_time = pw.DoubleField(null=True)
     finish_time = pw.DoubleField(null=True)
 
@@ -330,7 +330,7 @@ class CalibrationGainFileInfo(base_model):
     finish_time : float
         End of data in the file in UNIX time.
     """
-    file = pw.ForeignKeyField(ArchiveFile, related_name='calibrationgaininfos')
+    file = pw.ForeignKeyField(ArchiveFile, backref='calibrationgaininfos')
     start_time = pw.DoubleField(null=True)
     finish_time = pw.DoubleField(null=True)
 
@@ -347,7 +347,7 @@ class FlagInputFileInfo(base_model):
     finish_time : float
         End of data in the file in UNIX time.
     """
-    file = pw.ForeignKeyField(ArchiveFile, related_name='flaginputinfos')
+    file = pw.ForeignKeyField(ArchiveFile, backref='flaginputinfos')
     start_time = pw.DoubleField(null=True)
     finish_time = pw.DoubleField(null=True)
 
@@ -364,7 +364,7 @@ class RawadcFileInfo(base_model):
     finish_time : float
         End of acquisition in UNIX time.
     """
-    file = pw.ForeignKeyField(ArchiveFile, related_name='rawadcinfos')
+    file = pw.ForeignKeyField(ArchiveFile, backref='rawadcinfos')
     start_time = pw.DoubleField(null=True)
     finish_time = pw.DoubleField(null=True)
 
@@ -383,7 +383,7 @@ class WeatherFileInfo(base_model):
     date : string
         The date of the weather data, in the form YYYYMMDD.
     """
-    file = pw.ForeignKeyField(ArchiveFile, related_name='weatherinfos')
+    file = pw.ForeignKeyField(ArchiveFile, backref='weatherinfos')
     start_time = pw.DoubleField(null=True)
     finish_time = pw.DoubleField(null=True)
     date = pw.CharField(null=True, max_length=8)
@@ -453,7 +453,7 @@ class StorageNode(base_model):
     host = pw.CharField(max_length=64, null=True)
     username = pw.CharField(max_length=64, null=True)
     address = pw.CharField(max_length=255, null=True)
-    group = pw.ForeignKeyField(StorageGroup, related_name='nodes')
+    group = pw.ForeignKeyField(StorageGroup, backref='nodes')
     mounted = pw.BooleanField(default=False)
     auto_import = pw.BooleanField(default=False)
     suspect = pw.BooleanField(default=False)
@@ -488,8 +488,8 @@ class ArchiveFileCopy(base_model):
         - 'N': no, attempt to delete
         In all cases we try to keep at least two copies of the file around.
     """
-    file = pw.ForeignKeyField(ArchiveFile, related_name='copies')
-    node = pw.ForeignKeyField(StorageNode, related_name='copies')
+    file = pw.ForeignKeyField(ArchiveFile, backref='copies')
+    node = pw.ForeignKeyField(StorageNode, backref='copies')
     has_file = EnumField(['N', 'Y', 'M', 'X'], default='N')
     wants_file = EnumField(['Y', 'M', 'N'], default='Y')
 
@@ -516,9 +516,9 @@ class ArchiveFileCopyRequest(base_model):
     timestamp : datetime
         The time the most recent request was made.
     """
-    file = pw.ForeignKeyField(ArchiveFile, related_name='requests')
-    group_to = pw.ForeignKeyField(StorageGroup, related_name='requests_to')
-    node_from = pw.ForeignKeyField(StorageNode, related_name='requests_from')
+    file = pw.ForeignKeyField(ArchiveFile, backref='requests')
+    group_to = pw.ForeignKeyField(StorageGroup, backref='requests_to')
+    node_from = pw.ForeignKeyField(StorageNode, backref='requests_from')
     nice = pw.IntegerField()
     completed = pw.BooleanField()
     cancelled = pw.BooleanField(default=False)
