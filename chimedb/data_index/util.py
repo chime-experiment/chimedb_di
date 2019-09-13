@@ -21,10 +21,10 @@ Routines
     populate_types
 """
 # === Start Python 2/3 compatibility
-from __future__ import (absolute_import, division,
-                        print_function, unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 from future.builtins import *  # noqa  pylint: disable=W0401, W0614
 from future.builtins.disabled import *  # noqa  pylint: disable=W0401, W0614
+
 # === End Python 2/3 compatibility
 
 from past.builtins import basestring
@@ -57,26 +57,40 @@ _fmt_calib_data = re.compile(r"\d{8}\.h5")
 # Routines for setting up the database
 # ====================================
 
+
 def populate_types():
     """Populate the AcqType, FileType and StorageGroup tables with standard
     entries."""
 
     for t in ["corr", "rawadc", "hk", "raw", "weather", "hkp"]:
         if not orm.AcqType.select().where(orm.AcqType.name == t).count():
-            orm.AcqType.insert(name = t).execute()
+            orm.AcqType.insert(name=t).execute()
 
-    for t in ["corr", "raw", "log", "hk", "atmel_id", "rawadc", "pdf", "gains",
-              "settings", "weather", "hkp", "calibration"]:
+    for t in [
+        "corr",
+        "raw",
+        "log",
+        "hk",
+        "atmel_id",
+        "rawadc",
+        "pdf",
+        "gains",
+        "settings",
+        "weather",
+        "hkp",
+        "calibration",
+    ]:
         if not orm.FileType.select().where(orm.FileType.name == t).count():
-            orm.FileType.insert(name = t).execute()
+            orm.FileType.insert(name=t).execute()
 
     for g in ["collection_server"]:
         if not orm.StorageGroup.select().where(orm.StorageGroup.name == g).count():
-            orm.StorageGroup.insert(name = g).execute()
+            orm.StorageGroup.insert(name=g).execute()
 
 
 # Helper routines for adding files
 # ================================
+
 
 def md5sum_file(filename, hr=True, cmd_line=False):
     """Find the md5sum of a given file.
@@ -107,11 +121,11 @@ def md5sum_file(filename, hr=True, cmd_line=False):
     else:
         import hashlib
 
-        block_size = 256*128
+        block_size = 256 * 128
 
         md5 = hashlib.md5()
-        with open(filename, 'rb') as f:
-            for chunk in iter(lambda: f.read(block_size), b''):
+        with open(filename, "rb") as f:
+            for chunk in iter(lambda: f.read(block_size), b""):
                 md5.update(chunk)
         if hr:
             return md5.hexdigest()
@@ -131,10 +145,10 @@ def parse_acq_name(name):
 
     """
     if not re.match(_fmt_acq, name):
-        raise db.ValidationError("Bad acquisition name format for \"%s\"." % name)
+        raise db.ValidationError('Bad acquisition name format for "%s".' % name)
     ret = tuple(name.split("_"))
     if len(ret) != 3:
-        raise db.ValidationError("Bad acquisition name format for \"%s\"." % name)
+        raise db.ValidationError('Bad acquisition name format for "%s".' % name)
     return ret
 
 
@@ -151,10 +165,9 @@ def parse_corrfile_name(name):
     """
     m = re.match(_fmt_corr, name)
     if not m:
-        raise db.ValidationError("Bad correlator file name format for \"%s\"." % name)
+        raise db.ValidationError('Bad correlator file name format for "%s".' % name)
 
-    return int(m.group(1).lstrip("0") or "0"), \
-           int(m.group(2).lstrip("0") or "0")
+    return int(m.group(1).lstrip("0") or "0"), int(m.group(2).lstrip("0") or "0")
 
 
 def parse_weatherfile_name(name):
@@ -170,7 +183,7 @@ def parse_weatherfile_name(name):
     """
     m = re.match(_fmt_weather, name)
     if not m:
-        raise db.ValidationError("Bad weather file name format for \"%s\"." % name)
+        raise db.ValidationError('Bad weather file name format for "%s".' % name)
 
     return name[0:8]
 
@@ -188,7 +201,7 @@ def parse_hkfile_name(name):
     """
     m = re.match(_fmt_hk, name)
     if not m:
-        raise db.ValidationError("Bad correlator file name format for \"%s\"." % name)
+        raise db.ValidationError('Bad correlator file name format for "%s".' % name)
 
     return int(m.group(2).lstrip("0") or "0"), m.group(1)
 
