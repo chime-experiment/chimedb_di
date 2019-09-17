@@ -1,4 +1,6 @@
 """alpenhorn (data index) table definitions"""
+import orm, util
+
 from .orm import (
     AcqType,
     ArchiveAcq,
@@ -22,4 +24,4 @@ from .orm import (
     WeatherFileInfo,
 )
 
-__version__ = "0.0.1"
+__version__ = "0.0.2"
