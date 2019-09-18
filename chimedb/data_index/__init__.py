@@ -1,5 +1,5 @@
 """alpenhorn (data index) table definitions"""
-import orm, util
+from . import orm, util
 
 from .orm import (
     AcqType,
