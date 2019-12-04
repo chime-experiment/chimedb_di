@@ -28,6 +28,7 @@ from future.builtins.disabled import *  # noqa  pylint: disable=W0401, W0614
 # === End Python 2/3 compatibility
 
 from past.builtins import basestring
+import chimedb.core as db
 import os
 import peewee as pw
 import re
