@@ -3,6 +3,16 @@
 This package, built on top of [chimedb.core](https://github.com/chime-experiment/chimedb), defines the
 data index tables used by `alpenhorn` to track raw data files.
 
+## Installing
+
+Install directly from GitHub:
+```
+pip install git+ssh://git@github.com/chime-experiment/chimedb_di.git
+```
+
+If, instead, you're installing from a local clone, read the installation instructions in the
+[chimedb.core README.md](https://github.com/chime-experiment/chimedb/) for an important caveat.
+
 ## Contents
 
 The table classes provided in `chimedb.data_index` are:
