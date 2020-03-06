@@ -123,6 +123,10 @@ class ArchiveAcq(base_model):
         return self.files.join(WeatherFileInfo)
 
     @property
+    def misc_files(self):
+        return self.files.join(MiscFileInfo)
+
+    @property
     def rawadc_files(self):
         return self.files.join(RawadcFileInfo)
 
@@ -411,6 +415,27 @@ class WeatherFileInfo(base_model):
     date = pw.CharField(null=True, max_length=8)
 
 
+class MiscFileInfo(base_model):
+    """Information about miscellaneous data tarballs.
+
+    Attributes
+    ----------
+    file : foreign key
+        Reference to the file this information is about.
+    start_time : float
+        Start of acquisition in UNIX time.
+    finish_time : float
+        End of acquisition in UNIX time.
+    data_type : string
+        The miscellaneous data type.
+    """
+
+    file = pw.ForeignKeyField(ArchiveFile, backref="miscinfos")
+    start_time = pw.DoubleField(null=True)
+    finish_time = pw.DoubleField(null=True)
+    data_type = pw.CharField()
+
+
 # List of info models, used in some local code.
 file_info_table = [
     CorrFileInfo,
@@ -421,7 +446,29 @@ file_info_table = [
     DigitalGainFileInfo,
     CalibrationGainFileInfo,
     FlagInputFileInfo,
+    MiscFileInfo,
 ]
+
+
+class MiscFileList(base_model):
+    """List of files contained in a miscellaneous data tarball.
+
+    Attributes
+    ----------
+    file : foreign key
+        Reference to the file this information is about.
+    name : string
+        Name of the file in the tarball
+    size_b : integer
+        Uncompressed size of the file
+    mtime : datetime
+        Modification time of the file
+    """
+
+    file = pw.ForeignKeyField(ArchiveFile, backref="miscfiles")
+    name = pw.CharField()
+    size_b = pw.IntegerField()
+    mtime = pw.DateTimefield()
 
 
 class StorageGroup(base_model):
