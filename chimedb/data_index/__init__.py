@@ -18,7 +18,6 @@ from .orm import (
     HKFileInfo,
     HKPFileInfo,
     MiscFileInfo,
-    MiscFileList,
     RawadcAcqInfo,
     RawadcFileInfo,
     StorageGroup,
