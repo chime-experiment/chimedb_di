@@ -17,6 +17,7 @@ from .orm import (
     HKAcqInfo,
     HKFileInfo,
     HKPFileInfo,
+    MiscFileInfo,
     RawadcAcqInfo,
     RawadcFileInfo,
     StorageGroup,
@@ -24,4 +25,4 @@ from .orm import (
     WeatherFileInfo,
 )
 
-__version__ = "0.0.2"
+__version__ = "0.1.0"

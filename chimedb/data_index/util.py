@@ -41,18 +41,21 @@ from . import orm
 fname_atmel = "atmel_id.dat"
 
 _fmt_acq = re.compile("([0-9]{8})T([0-9]{6})Z_([A-Za-z0-9]*)_([A-Za-z]*)")
-_fmt_corr = re.compile("([0-9]{8})_([0-9]{4}).h5")
-_fmt_hk = re.compile("([A-Za-z]*)_([0-9]{8}).h5")
-_fmt_hkp = re.compile("hkp_prom_([0-9]{8}).h5")
+_fmt_corr = re.compile("([0-9]{8})_([0-9]{4})\.h5")
+_fmt_hk = re.compile("([A-Za-z]*)_([0-9]{8})\.h5")
+_fmt_hkp = re.compile("hkp_prom_([0-9]{8})\.h5")
 _fmt_atmel = re.compile("atmel_id\.dat")
 _fmt_log = re.compile("ch_(master|hk)\.log")
 _fmt_rawadc = re.compile("rawadc\.npy")
 _fmt_rawadc_hist = re.compile("histogram_chan([0-9]{1,2})\.pdf")
 _fmt_rawadc_spec = re.compile("spectrum_chan([0-9]{1,2})\.pdf")
-_fmt_rawadc_h5 = re.compile("[0-9]{6}.h5")
+_fmt_rawadc_h5 = re.compile("[0-9]{6}\.h5")
 _fmt_raw_gains = re.compile("(gains|gains_noisy)\.pkl")
-_fmt_weather = re.compile("(20[12][0-9][01][0-9][0123][0-9]).h5")
+_fmt_weather = re.compile("(20[12][0-9][01][0-9][0123][0-9])\.h5")
 _fmt_calib_data = re.compile(r"\d{8}\.h5")
+_fmt_misc_tar = re.compile(
+    "([0-9]{8})_([A-Za-z][A-Za-z0-9_+-]*)\.misc\.tar(?:\.gz|\.bz2|\.xz)"
+)
 
 
 # Routines for setting up the database
@@ -63,30 +66,63 @@ def populate_types():
     """Populate the AcqType, FileType and StorageGroup tables with standard
     entries."""
 
-    for t in ["corr", "rawadc", "hk", "raw", "weather", "hkp"]:
-        if not orm.AcqType.select().where(orm.AcqType.name == t).count():
-            orm.AcqType.insert(name=t).execute()
+    with db.proxy.atomic():
+        for t in [
+            {
+                "name": "corr",
+                "notes": "Traditionally hand-tooled correlation products from a correlator.",
+            },
+            {
+                "name": "rawadc",
+                "notes": "Raw ADC data taken for testing the status of a correlator.",
+            },
+            {"name": "hk", "notes": "Housekeeping data."},
+            {
+                "name": "weather",
+                "notes": "Weather data scraped from the wview archive provided by DRAO.",
+            },
+            {
+                "name": "hkp",
+                "notes": "New prometheus based scheme for recording housekeeping data.",
+            },
+            {"name": "digitalgain", "notes": "FPGA digital gains from the F-Engine."},
+            {"name": "gain", "notes": "Complex gains from the calibration broker."},
+            {
+                "name": "flaginput",
+                "notes": "Good correlator input flags from the flagging broker.",
+            },
+            {"name": "misc", "motes": "Miscellaneous data products."},
+        ]:
+            if not orm.AcqType.select().where(orm.AcqType.name == t["name"]).count():
+                orm.AcqType.insert(**t).execute()
 
-    for t in [
-        "corr",
-        "raw",
-        "log",
-        "hk",
-        "atmel_id",
-        "rawadc",
-        "pdf",
-        "gains",
-        "settings",
-        "weather",
-        "hkp",
-        "calibration",
-    ]:
-        if not orm.FileType.select().where(orm.FileType.name == t).count():
-            orm.FileType.insert(name=t).execute()
-
-    for g in ["collection_server"]:
-        if not orm.StorageGroup.select().where(orm.StorageGroup.name == g).count():
-            orm.StorageGroup.insert(name=g).execute()
+    with db.proxy.atomic():
+        for t in [
+            {
+                "name": "corr",
+                "notes": "Traditionally hand-tooled correlation products from a correlator.",
+            },
+            {
+                "name": "log",
+                "notes": "A human-readable log file produced by acquisition software.",
+            },
+            {"name": "hk", "notes": "A housekeeping file."},
+            {
+                "name": "atmel_id",
+                "notes": "A short file listing the ATMEL ID's and human readable names in an HK acquisition.",
+            },
+            {"name": "rawadc", "notes": "A python numpy array with raw ADC values."},
+            {"name": "pdf", "notes": "A portable document file."},
+            {"name": "weather", "notes": "DRAO weather data."},
+            {"name": "hkp", "notes": "Archive of the prometheus housekeeping data."},
+            {"name": "calibration", "notes": "Calibration data products."},
+            {
+                "name": "miscellaneous",
+                "notes": "A tarball of miscellaneous data files.",
+            },
+        ]:
+            if not orm.FileType.select().where(orm.FileType.name == t["name"]).count():
+                orm.FileType.insert(**t).execute()
 
 
 # Helper routines for adding files
@@ -168,7 +204,7 @@ def parse_corrfile_name(name):
     if not m:
         raise db.ValidationError('Bad correlator file name format for "%s".' % name)
 
-    return int(m.group(1).lstrip("0") or "0"), int(m.group(2).lstrip("0") or "0")
+    return int(m.group(1)), int(m.group(2))
 
 
 def parse_weatherfile_name(name):
@@ -189,6 +225,26 @@ def parse_weatherfile_name(name):
     return name[0:8]
 
 
+def parse_miscfile_name(name):
+    """Validate and parse a misc file name.
+
+    Parameters
+    ----------
+    name : The name of the file.
+
+    Returns
+    -------
+    A tuple of containing the eight-digit serial number and the misc data
+    type.
+    """
+    m = re.match(_fmt_misc_tar, name)
+    if not m:
+        raise db.ValidationError(
+            'Bad miscellaneous file name format for "{0}".'.format(name)
+        )
+    return int(m.group(1)), m.group(2)
+
+
 def parse_hkfile_name(name):
     """Validate and parse a correlation file name.
 
@@ -204,7 +260,7 @@ def parse_hkfile_name(name):
     if not m:
         raise db.ValidationError('Bad correlator file name format for "%s".' % name)
 
-    return int(m.group(2).lstrip("0") or "0"), m.group(1)
+    return int(m.group(2)), m.group(1)
 
 
 def detect_file_type(name):
@@ -240,5 +296,7 @@ def detect_file_type(name):
         return orm.FileType.get(name="weather")
     elif re.match(_fmt_calib_data, name):
         return orm.FileType.get(name="calibration")
+    elif re.match(_fmt_misc_tar, name):
+        return orm.FileType.get(name="miscellaneous")
     else:
         return None

@@ -8,7 +8,7 @@ from future.builtins.disabled import *  # noqa  pylint: disable=W0401, W0614
 
 # === End Python 2/3 compatibility
 
-from chimedb.core.orm import base_model, name_table, EnumField
+from chimedb.core.orm import base_model, name_table, EnumField, JSONDictField
 
 import peewee as pw
 
@@ -45,6 +45,8 @@ class AcqType(name_table):
     ----------
     name : string
         Short name of type. e.g. `raw`, `vis`
+    notes : string
+        Human-readable description
     """
 
     name = pw.CharField(max_length=64)
@@ -121,6 +123,10 @@ class ArchiveAcq(base_model):
     @property
     def weather_files(self):
         return self.files.join(WeatherFileInfo)
+
+    @property
+    def misc_files(self):
+        return self.files.join(MiscFileInfo)
 
     @property
     def rawadc_files(self):
@@ -411,6 +417,31 @@ class WeatherFileInfo(base_model):
     date = pw.CharField(null=True, max_length=8)
 
 
+class MiscFileInfo(base_model):
+    """Information about miscellaneous data tarballs.
+
+    Attributes
+    ----------
+    file : foreign key
+        Reference to the file this information is about.
+    start_time : float
+        Start of acquisition in UNIX time.
+    finish_time : float
+        End of acquisition in UNIX time.
+    data_type : string
+        The miscellaneous data type.
+    metdata : dict
+        Metadata describing the data in the tarball.  Extracted from the
+        METADATA.json file.
+    """
+
+    file = pw.ForeignKeyField(ArchiveFile, backref="miscinfos")
+    start_time = pw.DoubleField(null=True)
+    finish_time = pw.DoubleField(null=True)
+    data_type = pw.CharField()
+    metadata = JSONDictField()
+
+
 # List of info models, used in some local code.
 file_info_table = [
     CorrFileInfo,
@@ -421,6 +452,7 @@ file_info_table = [
     DigitalGainFileInfo,
     CalibrationGainFileInfo,
     FlagInputFileInfo,
+    MiscFileInfo,
 ]
 
 
