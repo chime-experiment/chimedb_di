@@ -7,7 +7,7 @@ data index tables used by `alpenhorn` to track raw data files.
 
 Install directly from GitHub:
 ```
-pip install git+ssh://git@github.com/chime-experiment/chimedb_di.git
+pip install git+https://github.com/chime-experiment/chimedb_di.git
 ```
 
 If, instead, you're installing from a local clone, read the installation instructions in the
