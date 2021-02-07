@@ -462,12 +462,19 @@ class StorageGroup(base_model):
     Attributes
     ----------
     name : string
-        The group that this node belongs to (Scinet, DRAO hut, . . .).
+        The name of the group
+    small_size : integer
+        The threshold size (in bytes) for small files.
+        Ignored if small_group is not also defined.
+    small_group : foreign key
+        The StorageGroup used for small-file storage, or None.
     notes : string
         Any notes about this storage group.
     """
 
     name = pw.CharField(max_length=64)
+    small_size = pw.IntegerField(default=0)
+    small_group = pw.ForeignKeyField('self', backref="large_group", null=True)
     notes = pw.TextField(null=True)
 
 
