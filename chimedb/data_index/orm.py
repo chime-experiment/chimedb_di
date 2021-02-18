@@ -58,6 +58,11 @@ class AcqType(name_table):
         return cls.from_name("corr")
 
     @classmethod
+    def hfb(cls):
+        """For getting the HFB acquisition type."""
+        return cls.from_name("hfb")
+
+    @classmethod
     def hk(cls):
         """For getting the housekeeping acquisition type."""
         return cls.from_name("hk")
@@ -117,6 +122,10 @@ class ArchiveAcq(base_model):
         return self.files.join(CorrFileInfo)
 
     @property
+    def hfb_files(self):
+        return self.files.join(HFBFileInfo)
+
+    @property
     def hk_files(self):
         return self.files.join(HKFileInfo)
 
@@ -134,12 +143,12 @@ class ArchiveAcq(base_model):
 
     @property
     def timed_files(self):
-        return self.corr_files | self.hk_files | self.weather_files | self.rawadc_files
+        return self.corr_files | self.hfb_files | self.hk_files | self.weather_files | self.rawadc_files
 
     @property
     def n_timed_files(self):
         return (
-            self.corr_files.count() + self.hk_files.count() + self.weather_files.count()
+            self.corr_files.count() + self.hfb_files.count() + self.hk_files.count() + self.weather_files.count()
         )
 
     @property
@@ -183,6 +192,31 @@ class CorrAcqInfo(base_model):
     integration = pw.DoubleField(null=True)
     nfreq = pw.IntegerField(null=True)
     nprod = pw.IntegerField(null=True)
+
+
+class HFBAcqInfo(base_model):
+    """Information about a HFB acquisition.
+
+    Attributes
+    ----------
+    acq : foreign key
+        Reference to the acquisition that the information is for.
+    integration : float
+        Integration time in seconds.
+    nfreq : integer
+        Number of frequency channels.
+    nsubfreq : integer
+        Number of sub-frequencies in acquisition.
+    nbeam : integer
+        Number of beams in acquisition.
+
+    """
+
+    acq = pw.ForeignKeyField(ArchiveAcq, backref="hfbinfos")
+    integration = pw.DoubleField(null=True)
+    nfreq = pw.IntegerField(null=True)
+    nsubfreq = pw.IntegerField(null=True)
+    nbeam = pw.IntegerField(null=True)
 
 
 class HKAcqInfo(base_model):
@@ -276,6 +310,30 @@ class CorrFileInfo(base_model):
     """
 
     file = pw.ForeignKeyField(ArchiveFile, backref="corrinfos")
+    start_time = pw.DoubleField(null=True)
+    finish_time = pw.DoubleField(null=True)
+    chunk_number = pw.IntegerField(null=True)
+    freq_number = pw.IntegerField(null=True)
+
+
+class HFBFileInfo(base_model):
+    """Information about a HFB data file.
+
+    Attributes
+    ----------
+    file : foreign key
+        Reference to the file this information is about.
+    chunk_number : integer
+        Label for where in the acquisition this file is.
+    freq_number : integer
+        Which frequency slice this file is.
+    start_time : float
+        Start of acquisition in UNIX time.
+    finish_time : float
+        End of acquisition in UNIX time.
+    """
+
+    file = pw.ForeignKeyField(ArchiveFile, backref="hfbinfos")
     start_time = pw.DoubleField(null=True)
     finish_time = pw.DoubleField(null=True)
     chunk_number = pw.IntegerField(null=True)
@@ -445,6 +503,7 @@ class MiscFileInfo(base_model):
 # List of info models, used in some local code.
 file_info_table = [
     CorrFileInfo,
+    HFBFileInfo,
     HKFileInfo,
     WeatherFileInfo,
     RawadcFileInfo,
