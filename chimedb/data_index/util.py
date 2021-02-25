@@ -42,6 +42,7 @@ fname_atmel = "atmel_id.dat"
 
 _fmt_acq = re.compile("([0-9]{8})T([0-9]{6})Z_([A-Za-z0-9]*)_([A-Za-z]*)")
 _fmt_corr = re.compile("([0-9]{8})_([0-9]{4})\.h5")
+_fmt_hfb = re.compile("([0-9]{8})\.h5")
 _fmt_hk = re.compile("([A-Za-z]*)_([0-9]{8})\.h5")
 _fmt_hkp = re.compile("hkp_prom_([0-9]{8})\.h5")
 _fmt_atmel = re.compile("atmel_id\.dat")
@@ -73,6 +74,10 @@ def populate_types():
                 "notes": "Traditionally hand-tooled correlation products from a correlator.",
             },
             {
+                "name": "hfb",
+                "notes": "21cm absorber (Hyper Fine Beam) data taken from a correlator.",
+            },
+            {
                 "name": "rawadc",
                 "notes": "Raw ADC data taken for testing the status of a correlator.",
             },
@@ -102,6 +107,11 @@ def populate_types():
                 "name": "corr",
                 "notes": "Traditionally hand-tooled correlation products from a correlator.",
             },
+            {
+                "name": "hfb",
+                "notes": "21cm absorber (Hyper Fine Beam) data taken from a correlator.",
+            },
+
             {
                 "name": "log",
                 "notes": "A human-readable log file produced by acquisition software.",
@@ -278,6 +288,8 @@ def detect_file_type(name):
 
     if re.match(_fmt_corr, name):
         return orm.FileType.get(name="corr")
+    elif re.match(_fmt_hfb, name):
+        return orm.FileType.get(name="hfb")
     elif re.match(_fmt_hk, name):
         return orm.FileType.get(name="hk")
     elif re.match(_fmt_hkp, name):
