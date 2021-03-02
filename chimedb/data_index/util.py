@@ -42,7 +42,7 @@ fname_atmel = "atmel_id.dat"
 
 _fmt_acq = re.compile("([0-9]{8})T([0-9]{6})Z_([A-Za-z0-9]*)_([A-Za-z]*)")
 _fmt_corr = re.compile("([0-9]{8})_([0-9]{4})\.h5")
-_fmt_hfb = re.compile("([0-9]{8})\.h5")
+_fmt_hfb = re.compile("hfb_([0-9]{8})_([0-9]{4})\.h5")
 _fmt_hk = re.compile("([A-Za-z]*)_([0-9]{8})\.h5")
 _fmt_hkp = re.compile("hkp_prom_([0-9]{8})\.h5")
 _fmt_atmel = re.compile("atmel_id\.dat")
