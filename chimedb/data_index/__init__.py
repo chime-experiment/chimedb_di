@@ -14,6 +14,8 @@ from .orm import (
     DigitalGainFileInfo,
     FileType,
     FlagInputFileInfo,
+    HFBAcqInfo,
+    HFBFileInfo,
     HKAcqInfo,
     HKFileInfo,
     HKPFileInfo,

@@ -70,33 +70,47 @@ def populate_types():
     with db.proxy.atomic():
         for t in [
             {
+                "id": 1,
                 "name": "corr",
                 "notes": "Traditionally hand-tooled correlation products from a correlator.",
             },
+            {"id": 2, "name": "hk", "notes": "Housekeeping data."},
             {
-                "name": "hfb",
-                "notes": "21cm absorber (Hyper Fine Beam) data taken from a correlator.",
-            },
-            {
+                "id": 3,
                 "name": "rawadc",
                 "notes": "Raw ADC data taken for testing the status of a correlator.",
             },
-            {"name": "hk", "notes": "Housekeeping data."},
             {
+                "id": 5,
                 "name": "weather",
                 "notes": "Weather data scraped from the wview archive provided by DRAO.",
             },
             {
+                "id": 6,
                 "name": "hkp",
                 "notes": "New prometheus based scheme for recording housekeeping data.",
             },
-            {"name": "digitalgain", "notes": "FPGA digital gains from the F-Engine."},
-            {"name": "gain", "notes": "Complex gains from the calibration broker."},
             {
+                "id": 7,
+                "name": "digitalgain",
+                "notes": "FPGA digital gains from the F-Engine.",
+            },
+            {
+                "id": 8,
+                "name": "gain",
+                "notes": "Complex gains from the calibration broker.",
+            },
+            {
+                "id": 9,
                 "name": "flaginput",
                 "notes": "Good correlator input flags from the flagging broker.",
             },
-            {"name": "misc", "motes": "Miscellaneous data products."},
+            {"id": 10, "name": "misc", "notes": "Miscellaneous data products."},
+            {
+                "id": 11,
+                "name": "hfb",
+                "notes": "21cm absorber (Hyper Fine Beam) data taken from a correlator.",
+            },
         ]:
             if not orm.AcqType.select().where(orm.AcqType.name == t["name"]).count():
                 orm.AcqType.insert(**t).execute()
@@ -104,31 +118,43 @@ def populate_types():
     with db.proxy.atomic():
         for t in [
             {
+                "id": 1,
                 "name": "corr",
                 "notes": "Traditionally hand-tooled correlation products from a correlator.",
             },
             {
-                "name": "hfb",
-                "notes": "21cm absorber (Hyper Fine Beam) data taken from a correlator.",
-            },
-
-            {
+                "id": 2,
                 "name": "log",
                 "notes": "A human-readable log file produced by acquisition software.",
             },
-            {"name": "hk", "notes": "A housekeeping file."},
+            {"id": 3, "name": "hk", "notes": "A housekeeping file."},
             {
+                "id": 4,
                 "name": "atmel_id",
                 "notes": "A short file listing the ATMEL ID's and human readable names in an HK acquisition.",
             },
-            {"name": "rawadc", "notes": "A python numpy array with raw ADC values."},
-            {"name": "pdf", "notes": "A portable document file."},
-            {"name": "weather", "notes": "DRAO weather data."},
-            {"name": "hkp", "notes": "Archive of the prometheus housekeeping data."},
-            {"name": "calibration", "notes": "Calibration data products."},
             {
+                "id": 5,
+                "name": "rawadc",
+                "notes": "A python numpy array with raw ADC values.",
+            },
+            {"id": 6, "name": "pdf", "notes": "A portable document file."},
+            {"id": 10, "name": "weather", "notes": "DRAO weather data."},
+            {
+                "id": 11,
+                "name": "hkp",
+                "notes": "Archive of the prometheus housekeeping data.",
+            },
+            {"id": 12, "name": "calibration", "notes": "Calibration data products."},
+            {
+                "id": 13,
                 "name": "miscellaneous",
                 "notes": "A tarball of miscellaneous data files.",
+            },
+            {
+                "id": 14,
+                "name": "hfb",
+                "notes": "21cm absorber (Hyper Fine Beam) data taken from a correlator.",
             },
         ]:
             if not orm.FileType.select().where(orm.FileType.name == t["name"]).count():
