@@ -143,12 +143,21 @@ class ArchiveAcq(base_model):
 
     @property
     def timed_files(self):
-        return self.corr_files | self.hfb_files | self.hk_files | self.weather_files | self.rawadc_files
+        return (
+            self.corr_files
+            | self.hfb_files
+            | self.hk_files
+            | self.weather_files
+            | self.rawadc_files
+        )
 
     @property
     def n_timed_files(self):
         return (
-            self.corr_files.count() + self.hfb_files.count() + self.hk_files.count() + self.weather_files.count()
+            self.corr_files.count()
+            + self.hfb_files.count()
+            + self.hk_files.count()
+            + self.weather_files.count()
         )
 
     @property
