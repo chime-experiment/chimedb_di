@@ -16,6 +16,7 @@ Routines
     md5sum_file
     parse_acq_name
     parse_corrfile_name
+    parse_hfbfile_name
     parse_hkfile_name
     parse_weatherfile_name
     populate_types
@@ -239,6 +240,24 @@ def parse_corrfile_name(name):
     m = re.match(_fmt_corr, name)
     if not m:
         raise db.ValidationError('Bad correlator file name format for "%s".' % name)
+
+    return int(m.group(1)), int(m.group(2))
+
+
+def parse_hfbfile_name(name):
+    """Validate and parse a HFB file name.
+
+    Parameters
+    ----------
+    name : The name of the file.
+
+    Returns
+    -------
+    A tuple of seconds from start and freqency index.
+    """
+    m = re.match(_fmt_hfb, name)
+    if not m:
+        raise db.ValidationError('Bad HFB file name format for "%s".' % name)
 
     return int(m.group(1)), int(m.group(2))
 
