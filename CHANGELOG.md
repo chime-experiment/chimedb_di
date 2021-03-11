@@ -1,3 +1,14 @@
+# 21.3.0 (2021-03-11)
+
+
+### Features
+
+* Add HFB acquisition file definitions ([#14](https://github.com/chime-experiment/chimedb_di/pull/14)) ([feb704c](https://github.com/chime-experiment/chimedb_di/commit/feb704c510fc83522aab828aff35450e8b1385f7))
+
+
+
+
+
 # 0.1.1 (2020-05-04)
 
 
