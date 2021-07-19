@@ -7,7 +7,6 @@ from .orm import (
     ArchiveFile,
     ArchiveFileCopy,
     ArchiveFileCopyRequest,
-    ArchiveInst,
     CalibrationGainFileInfo,
     CorrAcqInfo,
     CorrFileInfo,

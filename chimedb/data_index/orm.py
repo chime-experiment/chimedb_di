@@ -8,6 +8,8 @@ from future.builtins.disabled import *  # noqa  pylint: disable=W0401, W0614
 
 # === End Python 2/3 compatibility
 
+import datetime
+
 from chimedb.core.orm import base_model, name_table, EnumField, JSONDictField
 
 import peewee as pw
@@ -23,19 +25,6 @@ _logger.addHandler(logging.NullHandler())
 
 # Tables pertaining to the data index.
 # ====================================
-
-
-class ArchiveInst(base_model):
-    """Instrument that took the data.
-
-    Attributes
-    ----------
-    name : string
-        Name of instrument.
-    """
-
-    name = pw.CharField(max_length=64)
-    notes = pw.TextField(null=True)
 
 
 class AcqType(name_table):
@@ -100,8 +89,6 @@ class ArchiveAcq(base_model):
     ----------
     name : string
         Name of acquisition.
-    inst : foreign key
-        Reference to the instrument that took the acquisition.
     type : foreign key
         Reference to the data type type.
     comment : string
@@ -113,7 +100,6 @@ class ArchiveAcq(base_model):
     """
 
     name = pw.CharField(max_length=64)
-    inst = pw.ForeignKeyField(ArchiveInst, backref="acqs")
     type = pw.ForeignKeyField(AcqType, backref="acqs")
     comment = pw.TextField(null=True)
 
@@ -292,6 +278,8 @@ class ArchiveFile(base_model):
         Size of file in bytes.
     md5sum : string
         md5 checksum of file. Used for verifying integrity.
+    registered : datetime
+        The time the file was registered in the database.
     """
 
     acq = pw.ForeignKeyField(ArchiveAcq, backref="files")
@@ -299,6 +287,7 @@ class ArchiveFile(base_model):
     name = pw.CharField(max_length=64)
     size_b = pw.BigIntegerField(null=True)
     md5sum = pw.CharField(null=True, max_length=32)
+    registered = pw.DateTimeField(default=datetime.datetime.now)
 
 
 class CorrFileInfo(base_model):
@@ -554,8 +543,8 @@ class StorageNode(base_model):
         The internet address for the host (e.g., mistaya.phas.ubc.ca)
     group : foreign key
         The group to which this node belongs.
-    mounted : bool
-        Is the node mounted?
+    active : bool
+        Is the node active?
     auto_import : bool
         Should files that appear on this node be automatically added?
     suspect : bool
@@ -586,7 +575,7 @@ class StorageNode(base_model):
     username = pw.CharField(max_length=64, null=True)
     address = pw.CharField(max_length=255, null=True)
     group = pw.ForeignKeyField(StorageGroup, backref="nodes")
-    mounted = pw.BooleanField(default=False)
+    active = pw.BooleanField(default=False)
     auto_import = pw.BooleanField(default=False)
     suspect = pw.BooleanField(default=False)
     storage_type = EnumField(["A", "T", "F"], default="A")
@@ -619,13 +608,19 @@ class ArchiveFileCopy(base_model):
         - 'M': maybe, can delete if we need space
         - 'N': no, attempt to delete
         In all cases we try to keep at least two copies of the file around.
+    size_b : integer
+        Allocated size of file in bytes (calculated as a multiple of 512-byte
+        blocks).
     """
 
     file = pw.ForeignKeyField(ArchiveFile, backref="copies")
     node = pw.ForeignKeyField(StorageNode, backref="copies")
     has_file = EnumField(["N", "Y", "M", "X"], default="N")
     wants_file = EnumField(["Y", "M", "N"], default="Y")
+    size_b = pw.BigIntegerField()
 
+    class Meta:
+        indexes = ((("file", "node"), True),)
 
 class ArchiveFileCopyRequest(base_model):
     """Requests for file copies.
@@ -648,6 +643,10 @@ class ArchiveFileCopyRequest(base_model):
         The number of previous requests that have been made for this copy.
     timestamp : datetime
         The time the most recent request was made.
+    transfer_started : datetime
+        The time the transfer was started.
+    transfer_completed : datetime
+        The time the transfer was completed.
     """
 
     file = pw.ForeignKeyField(ArchiveFile, backref="requests")
@@ -658,6 +657,8 @@ class ArchiveFileCopyRequest(base_model):
     cancelled = pw.BooleanField(default=False)
     n_requests = pw.IntegerField()
     timestamp = pw.DateTimeField()
+    transfer_started = pw.DateTimeField(null=True)
+    transfer_completed = pw.DateTimeField(null=True)
 
-    class Meta(object):
-        primary_key = pw.CompositeKey("file", "group_to", "node_from")
+    class Meta:
+        indexes = ((("file", "group_to", "node_from"), False),)  # non-unique index
