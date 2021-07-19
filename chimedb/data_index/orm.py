@@ -622,6 +622,7 @@ class ArchiveFileCopy(base_model):
     class Meta:
         indexes = ((("file", "node"), True),)
 
+
 class ArchiveFileCopyRequest(base_model):
     """Requests for file copies.
 
