@@ -677,5 +677,5 @@ class ArchiveFileCopyRequest(base_model):
     transfer_started = pw.DateTimeField(null=True)
     transfer_completed = pw.DateTimeField(null=True)
 
-    class Meta:
-        indexes = ((("file", "group_to", "node_from"), False),)  # non-unique index
+    class Meta(object):
+        primary_key = pw.CompositeKey("file", "group_to", "node_from")
