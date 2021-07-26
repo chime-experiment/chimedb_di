@@ -27,6 +27,19 @@ _logger.addHandler(logging.NullHandler())
 # ====================================
 
 
+class ArchiveInst(base_model):
+    """Instrument that took the data.
+
+    Attributes
+    ----------
+    name : string
+        Name of instrument.
+    """
+
+    name = pw.CharField(max_length=64)
+    notes = pw.TextField(null=True)
+
+
 class AcqType(name_table):
     """The type of data that is being taken in the acquisition.
 
@@ -89,6 +102,8 @@ class ArchiveAcq(base_model):
     ----------
     name : string
         Name of acquisition.
+    inst : foreign key
+        Reference to the instrument that took the acquisition.
     type : foreign key
         Reference to the data type type.
     comment : string
@@ -100,6 +115,7 @@ class ArchiveAcq(base_model):
     """
 
     name = pw.CharField(max_length=64)
+    inst = pw.ForeignKeyField(ArchiveInst, backref="acqs", null=True)
     type = pw.ForeignKeyField(AcqType, backref="acqs")
     comment = pw.TextField(null=True)
 

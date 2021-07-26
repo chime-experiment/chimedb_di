@@ -21,6 +21,7 @@ The table classes provided in `chimedb.data_index` are:
 * ArchiveFile
 * ArchiveFileCopy
 * ArchiveFileCopyRequest
+* ArchiveInst
 * CalibrationGainFileInfo
 * CorrAcqInfo
 * CorrFileInfo
