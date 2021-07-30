@@ -625,8 +625,7 @@ class ArchiveFileCopy(base_model):
         - 'N': no, attempt to delete
         In all cases we try to keep at least two copies of the file around.
     size_b : integer
-        Allocated size of file in bytes (calculated as a multiple of 512-byte
-        blocks).
+        Allocated size of file in bytes.
     """
 
     file = pw.ForeignKeyField(ArchiveFile, backref="copies")
