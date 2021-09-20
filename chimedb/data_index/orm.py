@@ -655,6 +655,8 @@ class ArchiveFileCopyRequest(base_model):
         Set to true when the copy has succeeded.
     cancelled : bool
         Set to true if the copy is no longer wanted.
+    prepared : bool
+        Set to true when the file on the source node is ready for transfer.
     n_requests : integer
         The number of previous requests that have been made for this copy.
     timestamp : datetime
@@ -671,6 +673,7 @@ class ArchiveFileCopyRequest(base_model):
     nice = pw.IntegerField()
     completed = pw.BooleanField()
     cancelled = pw.BooleanField(default=False)
+    prepared = pw.BooleanField(default=False)
     n_requests = pw.IntegerField()
     timestamp = pw.DateTimeField()
     transfer_started = pw.DateTimeField(null=True)
