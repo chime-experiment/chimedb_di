@@ -678,6 +678,3 @@ class ArchiveFileCopyRequest(base_model):
     timestamp = pw.DateTimeField()
     transfer_started = pw.DateTimeField(null=True)
     transfer_completed = pw.DateTimeField(null=True)
-
-    class Meta(object):
-        primary_key = pw.CompositeKey("file", "group_to", "node_from")
