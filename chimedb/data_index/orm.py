@@ -94,6 +94,11 @@ class AcqType(name_table):
         """For getting the digitalgain acquisition type."""
         return cls.from_name("digitalgain")
 
+    @classmethod
+    def timing(cls):
+        """For getting the delay acquisition type."""
+        return cls.from_name("timing")
+
 
 class ArchiveAcq(base_model):
     """Describe the acquisition.
@@ -432,6 +437,24 @@ class CalibrationGainFileInfo(base_model):
     finish_time = pw.DoubleField(null=True)
 
 
+class TimingFileInfo(base_model):
+    """Information about a timing data file.
+
+    Attributes
+    ----------
+    file : foreign key
+        Reference to the file this information is about.
+    start_time : float
+        Start of data in the file in UNIX time.
+    finish_time : float
+        End of data in the file in UNIX time.
+    """
+
+    file = pw.ForeignKeyField(ArchiveFile, backref="timinginfos")
+    start_time = pw.DoubleField(null=True)
+    finish_time = pw.DoubleField(null=True)
+
+
 class FlagInputFileInfo(base_model):
     """Information about a flag input data file.
 
@@ -524,6 +547,7 @@ file_info_table = [
     HKPFileInfo,
     DigitalGainFileInfo,
     CalibrationGainFileInfo,
+    TimingFileInfo,
     FlagInputFileInfo,
     MiscFileInfo,
 ]
