@@ -96,7 +96,7 @@ class AcqType(name_table):
 
     @classmethod
     def timing(cls):
-        """For getting the delay acquisition type."""
+        """For getting the timing acquisition type."""
         return cls.from_name("timing")
 
 
