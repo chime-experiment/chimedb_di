@@ -112,6 +112,11 @@ def populate_types():
                 "name": "hfb",
                 "notes": "21cm absorber (Hyper Fine Beam) data taken from a correlator.",
             },
+            {
+                "id": 12,
+                "name": "timing",
+                "notes": "Timing correction from the calibration broker.",
+            },
         ]:
             if not orm.AcqType.select().where(orm.AcqType.name == t["name"]).count():
                 orm.AcqType.insert(**t).execute()
