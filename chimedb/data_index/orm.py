@@ -1,26 +1,114 @@
 """
 Table definitions for the alpenhorn data index
 """
-# === Start Python 2/3 compatibility
-from __future__ import absolute_import, division, print_function, unicode_literals
-from future.builtins import *  # noqa  pylint: disable=W0401, W0614
-from future.builtins.disabled import *  # noqa  pylint: disable=W0401, W0614
-
-# === End Python 2/3 compatibility
-
+import logging
 import datetime
+import peewee as pw
 
 from chimedb.core.orm import base_model, name_table, EnumField, JSONDictField
 
-import peewee as pw
 
 # Logging
 # =======
-
-import logging
-
 _logger = logging.getLogger("chimedb")
 _logger.addHandler(logging.NullHandler())
+
+
+# Info base table
+# ===============
+class InfoBase(base_model):
+    """Abstract base class for CHIME Info tables.
+
+    The keyword parameters "node_" and "path_", if present, are passed,
+    along with the ArchiveAcq or ArchiveFile, to the method `_set_info`
+    which must be re-implemented by subclasses.
+
+    The dict returned from this `_set_info` call is merged into the list of
+    keyword parameters (after removing the keywords listed above).  These
+    merged keyword parameters is passed to the `peewee.Model` initialiser.
+
+    This _set_info() call is only performed if the "node_" and
+    "path_" keywords are provided.  The trailing underscore on these
+    keywords prevents the potential for clashes with field names of
+    the underlying table.
+    """
+
+    # Should be set to True for Acq Info classes
+    is_acq = False
+
+    def __init__(self, *args, **kwargs):
+        """initialise an instance.
+
+        Parameters
+        ----------
+        node_ : alpenhorn.update.UpdateableNode or None
+            The node on which the imported file is
+        path_ : pathlib.Path or None
+            Path to the imported file.  Relative to `node.root`.
+
+        Raises
+        ------
+        ValueError
+            the keyword "path_" was given, but "node_" was not.
+        """
+
+        # Remove keywords we consume
+        path = kwargs.pop("path_", None)
+        node = kwargs.pop("node_", None)
+        name_data = kwargs.pop("name_data_", tuple())
+
+        # If we were given an "item_", convert it to an acq or file as apporpriate
+        item = kwargs.pop("item_", None)
+        if item is not None:
+            if self.is_acq:
+                kwargs["acq"] = item
+            else:
+                kwargs["file"] = item
+
+        # Call _set_info, if necessary
+        if path is not None:
+            if node is None:
+                raise ValueError("no node_ specified with path_")
+
+            # Info returned is merged into kwargs so the peewee model can
+            # ingest it.
+            kwargs |= self._set_info(path=path, node=node, name_data=name_data)
+
+        # Continue init
+        super().__init__(*args, **kwargs)
+
+    def _set_info(self, path, node, re_groups):
+        """Generate info table field data for this path.
+
+        Calls to this method occur as part of object initialisation during
+        an init() call.
+
+        Subclasses must re-implement this method to generate metadata by
+        inspecting the acqusition or file on disk given by `path`.  To
+        access a file on the node, don't open() the path directly; use
+        `node.io.open(path)`.
+
+        Parameters
+        ----------
+        path : pathlib.Path
+            path to the file being imported.  Note this is _always_
+            the _file_ path, even for acqusitions.  Relative to
+            `node.db.root`.
+        node : alpenhorn.update.UpdateableNode
+            node where the file has been imported
+        re_groups : tuple
+            For File Info classes, this is a possibly-empty tuple containing
+            group matches from the pattern match that was performed on the
+            file name.  For Acq Info classes, this is always an empty tuple.
+
+        Returns
+        -------
+        info : dict
+            table data to be passed on to the peewee `Model` initialiser.
+
+        On error, implementations should raise an appropriate exception.
+        """
+        raise NotImplementedError("must be re-implemented by subclass")
 
 
 # Tables pertaining to the data index.
@@ -46,13 +134,22 @@ class AcqType(name_table):
     Attributes
     ----------
     name : string
-        Short name of type. e.g. `raw`, `vis`
-    notes : string
-        Human-readable description
+        Name of the type.  This appears as the last element of
+        an acqusition name.
+    info_class : string or None
+        Name of the associated Info class under `alpenhorn_chime.info`.
+    notes : string or None
+        A human-readable description.
     """
 
-    name = pw.CharField(max_length=64)
+    name = pw.CharField(max_length=64, unique=True)
+    info_class = pw.CharField(max_length=64, null=True)
     notes = pw.TextField(null=True)
+
+    @property
+    def file_types(self):
+        """An iterator over the FileTypes supported by this AcqType."""
+        return FileType.select().join(AcqFileTypes).where(AcqFileTypes.acq_type == self)
 
     @classmethod
     def corr(cls):
@@ -114,9 +211,9 @@ class ArchiveAcq(base_model):
     n_timed_files
     """
 
-    name = pw.CharField(max_length=64)
+    name = pw.CharField(max_length=64, unique=True)
     inst = pw.ForeignKeyField(ArchiveInst, backref="acqs", null=True)
-    type = pw.ForeignKeyField(AcqType, backref="acqs")
+    type = pw.ForeignKeyField(AcqType, backref="acqs", null=True)
     comment = pw.TextField(null=True)
 
     @property
@@ -183,29 +280,113 @@ class ArchiveAcq(base_model):
         return start
 
 
-class CorrAcqInfo(base_model):
+# CHIME Acq Info Base Class
+# =========================
+class CHIMEAcqInfo(InfoBase):
+    """Abstract base class for CHIME Acq Info tables.
+
+    Add acq info base column `acq` and provides an implementation
+    of `_set_info` for convenience which converts the call into a
+    call to `_info_from_file`.
+
+    Subclasses should add additional fields.  They should also
+    either reimplement `_set_info` or else implement the method
+    `_info_from_file` which will be passed an open, read-only
+    file object.
+
+    Attributes
+    ----------
+    acq : foreign key to ArchiveAcq (or ArchiveAcq)
+        the corresponding acquisition record
+    """
+
+    is_acq = True
+
+    acq = pw.ForeignKeyField(ArchiveAcq)
+
+    def _set_info(self, path, node, name_data):
+        """Set acq info from file `path` on node `node`.
+
+        Calls `_info_from_file` to generate info data.
+
+        Parameters
+        ----------
+        node : StorageNode
+            the node we're importing on
+        path : pathlib.Path
+            the path relative to `node.root` of the file
+            being imported in this acquistion
+        name_data : dict
+            ignored
+
+        Returns
+        -------
+        info : dict
+            any data returned by `_info_from_file`, if that
+            method exists, or else an empty dict.
+
+        Notes
+        -----
+        For acqusitions, the only key in `name_data` is "acqtime" which
+        contains a `datetime` with the value of the acqusition timestamp.
+        If that value is important, subclasses must re-implement this
+        method to capture it.
+        """
+        if hasattr(self, "_info_from_file"):
+            # Open the file
+            with node.io.open(path) as file:
+                # Get keywords from file
+                return self._info_from_file(file)
+        else:
+            return dict()
+
+
+# Acq Info Tables
+# ===============
+class CorrAcqInfo(CHIMEAcqInfo):
     """Information about a correlation acquisition.
 
     Attributes
     ----------
-    acq : foreign key
-        Reference to the acquisition that the information is for.
+    acq : foreign key to ArchiveAcq
+        The acquisition that the information is for.
     integration : float
         Integration time in seconds.
     nfreq : integer
         Number of frequency channels.
     nprod : integer
         Number of correlation products in acquisition.
-
     """
 
-    acq = pw.ForeignKeyField(ArchiveAcq, backref="corrinfos")
     integration = pw.DoubleField(null=True)
     nfreq = pw.IntegerField(null=True)
     nprod = pw.IntegerField(null=True)
 
+    def _info_from_file(self, file):
+        """Return corr acq info from a file in the acq.
 
-class HFBAcqInfo(base_model):
+        Copied from `auto_import.get_acqcorrinfo_keywords_from_h5`
+        in alpenhorn-1.
+
+        Parameters
+        ----------
+        file : open, read-only file being imported.
+        """
+
+        # Find the integration time from the median difference between timestamps.
+        with h5py.File(file, "r") as f:
+            dt = np.array([])
+            t = f["/index_map/time"]
+            for i in range(1, len(t)):
+                dt = np.append(dt, float(t[i][1]) - float(t[i - 1][1]))
+            integration = np.median(dt)
+            n_freq = len(f["/index_map/freq"])
+            n_prod = len(f["/index_map/prod"])
+
+        return {"integration": integration, "nfreq": n_freq, "nprod": n_prod}
+
+
+class HFBAcqInfo(CHIMEAcqInfo):
     """Information about a HFB acquisition.
 
     Attributes
@@ -223,13 +404,42 @@ class HFBAcqInfo(base_model):
 
     """
 
-    acq = pw.ForeignKeyField(ArchiveAcq, backref="hfbinfos")
     integration = pw.DoubleField(null=True)
     nfreq = pw.IntegerField(null=True)
     nsubfreq = pw.IntegerField(null=True)
     nbeam = pw.IntegerField(null=True)
 
+    def _info_from_file(self, file):
+        """Return HFB corr acq info from a file in the acq.
 
+        Copied from `auto_import.get_acqhfbinfo_keywords_from_h5`
+        in alpenhorn-1.
+
+        Parameters
+        ----------
+        file : open, read-only file being imported.
+        """
+
+        # Find the integration time from the median difference between timestamps.
+        with h5py.File(file, "r") as f:
+            dt = np.array([])
+            t = f["/index_map/time"]
+            for i in range(1, len(t)):
+                dt = np.append(dt, float(t[i][1]) - float(t[i - 1][1]))
+            integration = np.median(dt)
+            n_freq = len(f["/index_map/freq"])
+            n_sub_freq = len(f["/index_map/subfreq"])
+            n_beam = len(f["/index_map/beam"])
+
+        return {
+            "integration": integration,
+            "nfreq": n_freq,
+            "nsubfreq": n_sub_freq,
+            "nbeam": n_beam,
+        }
+
+
+# This class is deprecated and kept here for legacy support
 class HKAcqInfo(base_model):
     """Information about a housekeeping acquisition.
     There should be one of these for each ATMEL board in the acquisition.
@@ -249,19 +459,36 @@ class HKAcqInfo(base_model):
     atmel_name = pw.CharField(max_length=64)
 
 
-class RawadcAcqInfo(base_model):
+class RawadcAcqInfo(CHIMEAcqInfo):
     """Information about a raw ADC acquisition.
 
     Attributes
     ----------
-    acq : foreign key
-           Reference to the acquisition that the information is for.
+    acq : foreign key to ArchiveAcq
+        The acquisition that the information is for.
     start_time : double
-           When the raw ADC acquisition was performed, in UNIX time.
+        When the raw ADC acquisition was performed, in UNIX time.
     """
 
-    acq = pw.ForeignKeyField(ArchiveAcq, backref="rawadcinfos")
     start_time = pw.DoubleField(null=True)
+
+    def _set_info(self, path, node, name_data):
+        """Generate acq info.
+
+        Parameters
+        ----------
+        node : StorageNode
+            the node we're importing on
+        path : pathlib.Path
+            the path relative to `node.root` of the file
+            being imported in this acquistion
+        name_data : dict
+            the value associated with key "acqtime" is used for "start_time"
+        """
+
+        info = super()._set_info(path=path, node=node, name_data=name_data)
+        info["start_time"] = calendar.timegm(name_data["acqtime"].utctimetuple())
+        return info
 
 
 class FileType(base_model):
@@ -271,12 +498,46 @@ class FileType(base_model):
     ----------
     name : string
         The name of this file type.
+    info_class : string or None
+        If not None, the name of the associated Info class, or an
+        Info-class-providing function, located under `alpenhorn_chime.info`.
+    pattern : string or None
+        If not None, a regular expression to match against the filename.  This
+        is the primary method of determining the type of a file.  If this is
+        None, no matching is done, and alpenhorn will be unable to import a file
+        of this type.
     notes: string
         Any notes or comments about this file type.
     """
 
     name = pw.CharField(max_length=64)
+    info_class = pw.CharField(max_length=64, null=True)
+    pattern = pw.CharField(max_length=64, null=True)
     notes = pw.TextField(null=True)
+
+
+class AcqFileTypes(base_model):
+    """FileTypes supported by an AcqType.
+
+    A junction table providing the many-to-many relationship
+    indicating which FileTypes are supported by which AcqTypes.
+
+    Attributes
+    ----------
+    acq_type : foreign key to AcqType
+    file_type : foreign key to FileType
+
+    Notes
+    -----
+    As this is a junction table, there is no id column.  The
+    tuple (acq_type, file_type) itself is the primary key.
+    """
+
+    acq_type = pw.ForeignKeyField(AcqType, backref="acq_types")
+    file_type = pw.ForeignKeyField(FileType, backref="file_types")
+
+    class Meta:
+        primary_key = pw.CompositeKey("acq_type", "file_type")
 
 
 class ArchiveFile(base_model):
@@ -299,20 +560,75 @@ class ArchiveFile(base_model):
     """
 
     acq = pw.ForeignKeyField(ArchiveAcq, backref="files")
-    type = pw.ForeignKeyField(FileType, backref="files")
+    type = pw.ForeignKeyField(FileType, null=True, backref="files")
     name = pw.CharField(max_length=64)
     size_b = pw.BigIntegerField(null=True)
     md5sum = pw.CharField(null=True, max_length=32)
     registered = pw.DateTimeField(default=datetime.datetime.now)
 
 
-class CorrFileInfo(base_model):
+# File Info Base Class
+# ====================
+class CHIMEFileInfo(InfoBase):
+    """Abstract base info class for a CHIME file
+
+    Subclasses must re-implement `_parse_filename` to implement
+    type detection, and optionally data gathering.
+
+    Subclasses should add additional fields.  They should also
+    either reimplement `_set_info` or else implement the method
+    `_info_from_file` which will be passed an open, read-only
+    file object.
+    """
+
+    file = pw.ForeignKeyField(ArchiveFile)
+
+    group_keys = tuple()
+
+    def _set_info(self, path, node, name_data):
+        """Set file info from file `path` on node `node`.
+
+        If defined in the class, calls `_info_from_file` to
+        populate the info record.
+
+        Additional fields provided in `name_data` are also merged
+        into the returned dict.
+
+        Parameters
+        ----------
+        node : UpdateableNode
+            the node we're importing on
+        path : pathlib.Path
+            the path relative to `node.root` of the file being imported
+        name_data : dict
+            other dict entries merged into the returned dict.  May be empty.
+
+        Returns
+        -------
+        info : dict
+            A dict containing data from `_info_from_file` and/or
+            `name_data`.
+        """
+        if hasattr(self, "_info_from_file"):
+            # Open the file
+            with node.io.open(path) as file:
+                # Get keywords from file
+                info = self._info_from_file(file)
+        else:
+            info = dict()
+
+        return info | name_data
+
+
+# File Info Tables
+# ================
+class CorrFileInfo(CHIMEFileInfo):
     """Information about a correlation data file.
 
     Attributes
     ----------
-    file : foreign key
-        Reference to the file this information is about.
+    file : foreign key to ArchiveFile
+        The file this information is about.
     chunk_number : integer
         Label for where in the acquisition this file is.
     freq_number : integer
@@ -323,14 +639,30 @@ class CorrFileInfo(base_model):
         End of acquisition in UNIX time.
     """
 
-    file = pw.ForeignKeyField(ArchiveFile, backref="corrinfos")
     start_time = pw.DoubleField(null=True)
     finish_time = pw.DoubleField(null=True)
     chunk_number = pw.IntegerField(null=True)
     freq_number = pw.IntegerField(null=True)
 
+    def _info_from_file(self, file):
+        """Get corr file info.
 
-class HFBFileInfo(base_model):
+        Parameters
+        ----------
+        file : open, read-only file
+            the file being imported.
+        """
+        with h5py.File(file, "r") as f:
+            start_time = f["/index_map/time"][0][1]
+            finish_time = f["/index_map/time"][-1][1]
+
+        return {
+            "start_time": start_time,
+            "finish_time": finish_time,
+        }
+
+
+class HFBFileInfo(CHIMEFileInfo):
     """Information about a HFB data file.
 
     Attributes
@@ -347,13 +679,30 @@ class HFBFileInfo(base_model):
         End of acquisition in UNIX time.
     """
 
-    file = pw.ForeignKeyField(ArchiveFile, backref="hfbinfos")
     start_time = pw.DoubleField(null=True)
     finish_time = pw.DoubleField(null=True)
     chunk_number = pw.IntegerField(null=True)
     freq_number = pw.IntegerField(null=True)
 
+    def _info_from_file(self, file):
+        """Get HFB file info.
 
+        Parameters
+        ----------
+        file : open, read-only file
+            the file being imported.
+        """
+        with h5py.File(file, "r") as f:
+            start_time = f["/index_map/time"][0][1]
+            finish_time = f["/index_map/time"][-1][1]
+
+        return {
+            "start_time": start_time,
+            "finish_time": finish_time,
+        }
+
+
+# This class is deprecated and kept here for legacy support
 class HKFileInfo(base_model):
     """Information about a housekeeping data file.
 
@@ -376,6 +725,7 @@ class HKFileInfo(base_model):
     chunk_number = pw.IntegerField(null=True)
 
 
+# This class is deprecated and kept here for legacy support
 class HKPFileInfo(base_model):
     """Information about a housekeeping data file.
 
@@ -396,8 +746,8 @@ class HKPFileInfo(base_model):
     finish_time = pw.DoubleField(null=True)
 
 
-class DigitalGainFileInfo(base_model):
-    """Information about a digital gain data file.
+class CalibrationFileInfo(CHIMEFileInfo):
+    """Base class for all calibration data types.
 
     Attributes
     ----------
@@ -409,13 +759,29 @@ class DigitalGainFileInfo(base_model):
         End of data in the file in UNIX time.
     """
 
-    file = pw.ForeignKeyField(ArchiveFile, backref="digitalgaininfos")
     start_time = pw.DoubleField(null=True)
     finish_time = pw.DoubleField(null=True)
 
+    def _info_from_file(self, file):
+        """Get cal file info.
 
-class CalibrationGainFileInfo(base_model):
-    """Information about a gain data file from the calibration broker.
+        Parameters
+        ----------
+        file : open, read-only file
+            the file being imported.
+        """
+        with h5py.File(file, "r") as f:
+            start_time = f["index_map/update_time"][0]
+            finish_time = f["index_map/update_time"][-1]
+
+        return {
+            "start_time": start_time,
+            "finish_time": finish_time,
+        }
+
+
+class DigitalGainFileInfo(CalibrationFileInfo):
+    """Digital gain data file info.
 
     Attributes
     ----------
@@ -427,13 +793,9 @@ class CalibrationGainFileInfo(base_model):
         End of data in the file in UNIX time.
     """
 
-    file = pw.ForeignKeyField(ArchiveFile, backref="calibrationgaininfos")
-    start_time = pw.DoubleField(null=True)
-    finish_time = pw.DoubleField(null=True)
 
-
-class FlagInputFileInfo(base_model):
-    """Information about a flag input data file.
+class CalibrationGainFileInfo(CalibrationFileInfo):
+    """Gain data file info.
 
     Attributes
     ----------
@@ -445,31 +807,55 @@ class FlagInputFileInfo(base_model):
         End of data in the file in UNIX time.
     """
 
-    file = pw.ForeignKeyField(ArchiveFile, backref="flaginputinfos")
-    start_time = pw.DoubleField(null=True)
-    finish_time = pw.DoubleField(null=True)
 
-
-class RawadcFileInfo(base_model):
-    """Information about a raw ADC sample file.
+class FlagInputFileInfo(CalibrationFileInfo):
+    """Flag input file info.
 
     Attributes
     ----------
     file : foreign key
         Reference to the file this information is about.
+    start_time : float
+        Start of data in the file in UNIX time.
+    finish_time : float
+        End of data in the file in UNIX time.
+    """
+
+
+class RawadcFileInfo(CHIMEFileInfo):
+    """Information about a rawadc data file.
+
+    Attributes
+    ----------
+    file : foreign key to ArchiveFile
+        The file this information is about.
     start_time : float
         Start of acquisition in UNIX time.
     finish_time : float
         End of acquisition in UNIX time.
     """
 
-    file = pw.ForeignKeyField(ArchiveFile, backref="rawadcinfos")
     start_time = pw.DoubleField(null=True)
     finish_time = pw.DoubleField(null=True)
 
+    def _info_from_file(self, file):
+        """Get rawadc file info.
 
-class WeatherFileInfo(base_model):
-    """Information about DRAO weather data.
+        Parameters
+        ----------
+        file : open, read-only file
+            the file being imported.
+        """
+        with h5py.File(file, "r") as f:
+            times = f["timestamp"]["ctime"]
+            start_time = times.min()
+            finish_time = times.max()
+
+        return {"start_time": start_time, "finish_time": finish_time}
+
+
+class WeatherFileInfo(CHIMEFileInfo):
+    """CHIME weather file info.
 
     Attributes
     ----------
@@ -483,10 +869,23 @@ class WeatherFileInfo(base_model):
         The date of the weather data, in the form YYYYMMDD.
     """
 
-    file = pw.ForeignKeyField(ArchiveFile, backref="weatherinfos")
     start_time = pw.DoubleField(null=True)
     finish_time = pw.DoubleField(null=True)
     date = pw.CharField(null=True, max_length=8)
+
+    def _set_info(self, node, path, name_data):
+        """Generate weather file info."""
+
+        date = name_data["date"]
+        dt = datetime.datetime.strptime(date, "%Y%m%d")
+        start_time = calendar.timegm(dt.utctimetuple())
+        finish_time = calendar.timegm(
+            (
+                dt + datetime.timedelta(days=1) - datetime.timedelta(seconds=1)
+            ).utctimetuple()
+        )
+
+        return {"start_time": start_time, "finish_time": finish_time, "date": date}
 
 
 class MiscFileInfo(base_model):
@@ -534,14 +933,22 @@ class StorageGroup(base_model):
 
     Attributes
     ----------
-    name : string
+    name : string, unique
         The group that this node belongs to (Scinet, DRAO hut, . . .).
-    notes : string
+    io_class : string
+        The I/O class for this node.  See below.  If this is NULL,
+        the value "Default" is used.
+    notes : string, optional
         Any notes about this storage group.
+    io_config : string
+        An optional JSON blob of configuration data interpreted by the
+        I/O class.  If given, must be a JSON object literal.
     """
 
-    name = pw.CharField(max_length=64)
+    name = pw.CharField(max_length=64, unique=True)
+    io_class = pw.CharField(max_length=255, null=True)
     notes = pw.TextField(null=True)
+    io_config = pw.TextField(null=True)
 
 
 class StorageNode(base_model):
@@ -564,7 +971,7 @@ class StorageNode(base_model):
     auto_import : bool
         Should files that appear on this node be automatically added?
     suspect : bool
-        Could this node be corrupted?
+        Deprecated
     storage_type : enum
         What is the type of storage?
         - 'A': archive for the data
@@ -585,22 +992,25 @@ class StorageNode(base_model):
         Any notes or comments about this node.
     """
 
-    name = pw.CharField(max_length=64)
+    name = pw.CharField(max_length=64, unique=True)
     root = pw.CharField(max_length=255, null=True)
     host = pw.CharField(max_length=64, null=True)
     username = pw.CharField(max_length=64, null=True)
     address = pw.CharField(max_length=255, null=True)
+    io_class = pw.CharField(max_length=255, null=True)
     group = pw.ForeignKeyField(StorageGroup, backref="nodes")
     active = pw.BooleanField(default=False)
     auto_import = pw.BooleanField(default=False)
-    suspect = pw.BooleanField(default=False)
+    auto_verify = pw.IntegerField(default=0)
+    suspect = pw.BooleanField(default=False, null=True)
     storage_type = EnumField(["A", "T", "F"], default="A")
-    max_total_gb = pw.FloatField(default=-1.0)
-    min_avail_gb = pw.FloatField()
+    max_total_gb = pw.FloatField(null=True)
+    min_avail_gb = pw.FloatField(default=0)
     avail_gb = pw.FloatField(null=True)
     avail_gb_last_checked = pw.DateTimeField(null=True)
-    min_delete_age_days = pw.FloatField(default=30)
+    min_delete_age_days = pw.FloatField(default=30, null=True)
     notes = pw.TextField(null=True)
+    io_config = pw.TextField(null=True)
 
 
 class ArchiveFileCopy(base_model):
@@ -626,6 +1036,8 @@ class ArchiveFileCopy(base_model):
         In all cases we try to keep at least two copies of the file around.
     size_b : integer
         Allocated size of file in bytes.
+    last_update : datetime
+        Time the record was last updated.
     """
 
     file = pw.ForeignKeyField(ArchiveFile, backref="copies")
@@ -633,6 +1045,7 @@ class ArchiveFileCopy(base_model):
     has_file = EnumField(["N", "Y", "M", "X"], default="N")
     wants_file = EnumField(["Y", "M", "N"], default="Y")
     size_b = pw.BigIntegerField()
+    last_update = pw.DateTimeField(default=datetime.datetime.now)
 
     class Meta:
         indexes = ((("file", "node"), True),)
@@ -650,15 +1063,13 @@ class ArchiveFileCopyRequest(base_model):
     node_from : foreign key
         The node from which the file should be copied.
     nice : integer
-        For nicing the copy/rsync process if resource management is needed.
+        Deprecated
     completed : bool
         Set to true when the copy has succeeded.
     cancelled : bool
         Set to true if the copy is no longer wanted.
-    prepared : bool
-        Set to true when the file on the source node is ready for transfer.
     n_requests : integer
-        The number of previous requests that have been made for this copy.
+        Deprecated
     timestamp : datetime
         The time the most recent request was made.
     transfer_started : datetime
@@ -670,11 +1081,10 @@ class ArchiveFileCopyRequest(base_model):
     file = pw.ForeignKeyField(ArchiveFile, backref="requests")
     group_to = pw.ForeignKeyField(StorageGroup, backref="requests_to")
     node_from = pw.ForeignKeyField(StorageNode, backref="requests_from")
-    nice = pw.IntegerField()
+    nice = pw.IntegerField(null=True)
     completed = pw.BooleanField()
     cancelled = pw.BooleanField(default=False)
-    prepared = pw.BooleanField(default=False)
-    n_requests = pw.IntegerField()
+    n_requests = pw.IntegerField(null=True)
     timestamp = pw.DateTimeField()
     transfer_started = pw.DateTimeField(null=True)
     transfer_completed = pw.DateTimeField(null=True)
