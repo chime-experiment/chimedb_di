@@ -372,6 +372,7 @@ class CorrAcqInfo(CHIMEAcqInfo):
         ----------
         file : open, read-only file being imported.
         """
+        import h5py
 
         # Find the integration time from the median difference between timestamps.
         with h5py.File(file, "r") as f:
@@ -419,6 +420,7 @@ class HFBAcqInfo(CHIMEAcqInfo):
         ----------
         file : open, read-only file being imported.
         """
+        import h5py
 
         # Find the integration time from the median difference between timestamps.
         with h5py.File(file, "r") as f:
@@ -652,6 +654,8 @@ class CorrFileInfo(CHIMEFileInfo):
         file : open, read-only file
             the file being imported.
         """
+        import h5py
+
         with h5py.File(file, "r") as f:
             start_time = f["/index_map/time"][0][1]
             finish_time = f["/index_map/time"][-1][1]
@@ -692,6 +696,8 @@ class HFBFileInfo(CHIMEFileInfo):
         file : open, read-only file
             the file being imported.
         """
+        import h5py
+
         with h5py.File(file, "r") as f:
             start_time = f["/index_map/time"][0][1]
             finish_time = f["/index_map/time"][-1][1]
@@ -770,6 +776,8 @@ class CalibrationFileInfo(CHIMEFileInfo):
         file : open, read-only file
             the file being imported.
         """
+        import h5py
+
         with h5py.File(file, "r") as f:
             start_time = f["index_map/update_time"][0]
             finish_time = f["index_map/update_time"][-1]
@@ -846,6 +854,8 @@ class RawadcFileInfo(CHIMEFileInfo):
         file : open, read-only file
             the file being imported.
         """
+        import h5py
+
         with h5py.File(file, "r") as f:
             times = f["timestamp"]["ctime"]
             start_time = times.min()
