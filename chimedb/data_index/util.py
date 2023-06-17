@@ -255,7 +255,7 @@ def detect_file_type(name):
 
 
 @db.atomic(read_write=True)
-def update_types() -> None:
+def update_types():
     """Set CHIME AcqType and FileType data.
 
     Adds or updates values in the AcqType, FileType, and AcqFileTypes
@@ -434,7 +434,7 @@ def update_types() -> None:
             AcqFileTypes.insert(acq_type=at, file_type=ft).execute()
 
 
-def update_inst() -> None:
+def update_inst():
     """Populate the ArchiveInst table."""
 
     inst = [
