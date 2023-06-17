@@ -249,8 +249,10 @@ def detect_file_type(name):
     else:
         return None
 
+
 # Routines for setting up the database
 # ====================================
+
 
 @db.atomic(read_write=True)
 def update_types() -> None:
