@@ -2,7 +2,9 @@
 Table definitions for the alpenhorn data index
 """
 import logging
+import calendar
 import datetime
+import numpy as np
 import peewee as pw
 
 from chimedb.core.orm import base_model, name_table, EnumField, JSONDictField

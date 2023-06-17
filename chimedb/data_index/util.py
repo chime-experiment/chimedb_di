@@ -22,7 +22,6 @@ Routines
     populate_types
 """
 import os
-import peewee as pw
 import re
 
 import chimedb.core as db
