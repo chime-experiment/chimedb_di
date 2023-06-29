@@ -1,0 +1,31 @@
+name: test-chimedb.data_index
+on:
+  pull_request:
+    branches:
+    - master
+  push:
+    branches:
+    - master
+
+jobs:
+  run-tests:
+    strategy:
+      matrix:
+        python-version: ["3.7", "3.11"]
+
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v1
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install pip dependencies
+      run: |
+        pip install .
+        pip install "pytest >= 7.0"
+
+    - name: Run tests
+      run: pytest -sv test/

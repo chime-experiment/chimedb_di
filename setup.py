@@ -16,6 +16,7 @@ setup(
         "chimedb @ git+https://github.com/chime-experiment/chimedb.git",
         "peewee >= 3.10",
         "future",
+        "h5py",
     ],
     author="CHIME collaboration",
     author_email="dvw@phas.ubc.ca",
