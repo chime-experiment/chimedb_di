@@ -560,7 +560,7 @@ class ArchiveFile(base_model):
     md5sum : string
         md5 checksum of file. Used for verifying integrity.
     registered : datetime
-        The time the file was registered in the database.
+        The UTC time when the file was registered in the database.
     """
 
     acq = pw.ForeignKeyField(ArchiveAcq, backref="files")
@@ -568,7 +568,7 @@ class ArchiveFile(base_model):
     name = pw.CharField(max_length=64)
     size_b = pw.BigIntegerField(null=True)
     md5sum = pw.CharField(null=True, max_length=32)
-    registered = pw.DateTimeField(default=datetime.datetime.now)
+    registered = pw.DateTimeField(default=datetime.datetime.utcnow)
 
 
 # File Info Base Class
@@ -1049,7 +1049,7 @@ class ArchiveFileCopy(base_model):
     size_b : integer
         Allocated size of file in bytes.
     last_update : datetime
-        Time the record was last updated.
+        The UTC time when the record was last updated.
     """
 
     file = pw.ForeignKeyField(ArchiveFile, backref="copies")
@@ -1057,7 +1057,7 @@ class ArchiveFileCopy(base_model):
     has_file = EnumField(["N", "Y", "M", "X"], default="N")
     wants_file = EnumField(["Y", "M", "N"], default="Y")
     size_b = pw.BigIntegerField()
-    last_update = pw.DateTimeField(default=datetime.datetime.now)
+    last_update = pw.DateTimeField(default=datetime.datetime.utcnow)
 
     class Meta:
         indexes = ((("file", "node"), True),)
