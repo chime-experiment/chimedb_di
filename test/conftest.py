@@ -8,6 +8,9 @@ from chimedb.data_index.orm import (
     AcqType,
     ArchiveInst,
     FileType,
+    StorageNode,
+    StorageGroup,
+    StorageTransferAction,
 )
 
 
@@ -34,5 +37,8 @@ def tables(proxy):
             AcqType,
             ArchiveInst,
             FileType,
+            StorageNode,
+            StorageGroup,
+            StorageTransferAction,
         ]
     )
