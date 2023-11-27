@@ -26,7 +26,15 @@ import re
 
 import chimedb.core as db
 
-from .orm import AcqFileTypes, AcqType, ArchiveInst, FileType
+from .orm import (
+    AcqFileTypes,
+    AcqType,
+    ArchiveInst,
+    FileType,
+    StorageNode,
+    StorageGroup,
+    StorageTransferAction,
+)
 
 # Global variables
 # ================
@@ -709,3 +717,139 @@ def update_inst():
     ]
 
     ArchiveInst.insert_many(inst, fields=[ArchiveInst.id, ArchiveInst.name]).execute()
+
+
+@db.atomic(read_write=True)
+def update_storage():
+    """Populate the Storage tables.
+
+    This sets up the standard CHIME dataflow.
+    """
+
+    # node and group caches
+    node_dict = dict()
+    group_dict = dict()
+
+    def _group(id_, name, io_class, notes):
+        """Creates a dict for a group."""
+        return {"id": id_, "name": name, "io_class": io_class, "notes": notes}
+
+    groups = [
+        _group(
+            3, "scinet_staging", None, "Temporary storage for incoming data on SciNet"
+        ),
+        _group(5, "scinet_hpss", None, "HPSS archival storage at SciNet."),
+        _group(7, "drao_storage", None, "Current storage on gong."),
+        _group(
+            9, "cedar_offload", None, "Queue of files waiting to be moved to nearline"
+        ),
+        _group(14, "cedar_online", None, "Archive for active data analysis on cedar."),
+        _group(
+            15, "cedar_staging", None, "Temporary storage for incoming data on cedar."
+        ),
+        _group(16, "cedar_nearline", "LustreHSM", "Nearline archival storage at cedar"),
+    ]
+
+    # Create groups, if necessary
+    for group in groups:
+        try:
+            group_dict[group["name"]] = StorageGroup.get(id=group["id"])
+        except StorageGroup.DoesNotExist:
+            group_dict[group["name"]] = StorageGroup.create(**group)
+
+    def _node(
+        id_,
+        name,
+        group,
+        io_class=None,
+        auto_import=False,
+        storage_type="F",
+        notes=None,
+        io_config=None,
+    ):
+        """Creates a dict for a node"""
+        return {
+            "id": id_,
+            "name": name,
+            "io_class": io_class,
+            "group": group_dict[group],
+            "active": False,
+            "auto_import": auto_import,
+            "storage_type": storage_type,
+            "notes": notes,
+            "io_config": io_config,
+        }
+
+    nodes = [
+        _node(11, "gong", "drao_storage", auto_import=True, storage_type="A"),
+        _node(1117, "cedar_offload", "cedar_offload", storage_type="A"),
+        _node(
+            1119,
+            "scinet_hpss",
+            "scinet_hpss",
+            storage_type="A",
+            notes="HPSS tape storage node at SciNet.",
+        ),
+        _node(1133, "scinet_staging", "scinet_staging", notes="Staging on Niagara"),
+        _node(
+            1136,
+            "cedar_online",
+            "cedar_online",
+            io_class="LustreQuota",
+            io_config='{"quota_group": "rpp-chime"}',
+        ),
+        _node(1137, "cedar_staging", "cedar_staging"),
+        _node(
+            1139,
+            "cedar_nearline",
+            "cedar_nearline",
+            io_class="LustreHSM",
+            storage_type="A",
+            io_config='{"quota_group": "rpp-chime", "fixed_quota": 300000000000, "headroom": 25000000000, "release_check_count": 100}',
+        ),
+        _node(
+            1142,
+            "cedar_smallfile",
+            "cedar_nearline",
+            storage_type="A",
+            notes="Archival storage for files too small for nearline",
+        ),
+    ]
+
+    # Create nodes, if necessary
+    for node in nodes:
+        try:
+            node_dict[node["name"]] = StorageNode.get(id=node["id"])
+        except StorageNode.DoesNotExist:
+            node_dict[node["name"]] = StorageNode.create(**node)
+
+    def _action(node_from, group_to, autosync, autoclean):
+        """Looks up nodes and groups to create a StorageTransferAction tuple."""
+        return (node_dict[node_from], group_dict[group_to], autosync, autoclean)
+
+    actions = [
+        # files appearing on gong are automatically transferred to cedar_staging
+        _action("gong", "cedar_staging", True, False),
+        # files arriving on cedar_staging are automatically transferred to cedar_offload
+        _action("cedar_staging", "cedar_offload", True, False),
+        # files arriving on cedar_staging are automatically transferred to scinet_staging
+        _action("cedar_staging", "scinet_staging", True, False),
+        # files are deleted from cedar_staging after being archived in HPSS on scinet
+        _action("cedar_staging", "scinet_hpss", False, True),
+        # files arriving on cedar_offload are automatically transferred to nearline,
+        # and then deleted once they're in nearline
+        _action("cedar_offload", "cedar_nearline", True, True),
+        # files arriving on scinet_staging are automatically transferred to HPSS,
+        # and then deleted once they're in HPSS
+        _action("scinet_staging", "scinet_hpss", True, True),
+    ]
+
+    StorageTransferAction.insert_many(
+        actions,
+        fields=[
+            StorageTransferAction.node_from,
+            StorageTransferAction.group_to,
+            StorageTransferAction.autosync,
+            StorageTransferAction.autoclean,
+        ],
+    ).execute()
