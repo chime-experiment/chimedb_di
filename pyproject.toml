@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=61.0.0", "wheel", "setuptools-git-versioning"]
+build-backed = "setuptools.build_meta"
+
+[project]
+name = "chimedb.data_index"
+authors = [
+  {name = "D. V. Wiebe for the CHIME Collaboration", email = "dvw@phas.ubc.ca"}
+]
+description = "CHIME data index (alpenhorn) ORM"
+requires-python = ">=3.8"
+dynamic = ["readme", "version"]
+license = {file = "LICENSE"}
+dependencies = [
+    "chimedb @ git+https://github.com/chime-experiment/chimedb.git",
+    "peewee >= 3.10",
+    "h5py",
+]
+
+[project.optional-dependencies]
+test = [
+  "pytest >= 7.0"
+]
+
+[tool.setuptools.dynamic]
+readme = {file = ["README.md"], content-type = "text/markdown"}
+
+[tool.setuptools-git-versioning]
+enabled = true

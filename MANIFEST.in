@@ -1,2 +1,0 @@
-include versioneer.py
-include chimedb/data_index/_version.py
