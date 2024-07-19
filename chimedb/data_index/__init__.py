@@ -1,4 +1,5 @@
 """alpenhorn (data index) table definitions"""
+
 from . import orm, util
 
 from .orm import (
