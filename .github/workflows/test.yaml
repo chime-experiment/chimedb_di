@@ -11,7 +11,7 @@ jobs:
   run-tests:
     strategy:
       matrix:
-        python-version: ["3.7", "3.11"]
+        python-version: ["3.8", "3.12"]
 
     runs-on: ubuntu-latest
     steps:
@@ -25,7 +25,7 @@ jobs:
     - name: Install pip dependencies
       run: |
         pip install .
-        pip install "pytest >= 7.0"
+        pip install .[test]
 
     - name: Run tests
       run: pytest -sv test/

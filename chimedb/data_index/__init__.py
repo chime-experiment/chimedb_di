@@ -1,4 +1,5 @@
 """alpenhorn (data index) table definitions"""
+
 from . import orm, util
 
 from .orm import (
@@ -27,8 +28,10 @@ from .orm import (
     WeatherFileInfo,
 )
 
+from importlib.metadata import version, PackageNotFoundError
 
-from ._version import get_versions
-
-__version__ = get_versions()["version"]
-del get_versions
+try:
+    __version__ = version("chimedb.data_index")
+except PackageNotFoundError:
+    # package is not installed
+    pass

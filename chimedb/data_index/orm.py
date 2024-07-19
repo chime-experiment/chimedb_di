@@ -1,6 +1,7 @@
 """
 Table definitions for the alpenhorn data index
 """
+
 import logging
 import calendar
 import datetime
