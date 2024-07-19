@@ -42,22 +42,22 @@ from .orm import (
 
 fname_atmel = "atmel_id.dat"
 
-_fmt_acq = re.compile("([0-9]{8})T([0-9]{6})Z_([A-Za-z0-9]*)_([A-Za-z]*)")
-_fmt_corr = re.compile("([0-9]{8})_([0-9]{4})\.h5")
-_fmt_hfb = re.compile("hfb_([0-9]{8})_([0-9]{4})\.h5")
-_fmt_hk = re.compile("([A-Za-z]*)_([0-9]{8})\.h5")
-_fmt_hkp = re.compile("hkp_prom_([0-9]{8})\.h5")
-_fmt_atmel = re.compile("atmel_id\.dat")
-_fmt_log = re.compile("ch_(master|hk)\.log")
-_fmt_rawadc = re.compile("rawadc\.npy")
-_fmt_rawadc_hist = re.compile("histogram_chan([0-9]{1,2})\.pdf")
-_fmt_rawadc_spec = re.compile("spectrum_chan([0-9]{1,2})\.pdf")
-_fmt_rawadc_h5 = re.compile("[0-9]{6}\.h5")
-_fmt_raw_gains = re.compile("(gains|gains_noisy)\.pkl")
-_fmt_weather = re.compile("(20[12][0-9][01][0-9][0123][0-9])\.h5")
+_fmt_acq = re.compile(r"([0-9]{8})T([0-9]{6})Z_([A-Za-z0-9]*)_([A-Za-z]*)")
+_fmt_corr = re.compile(r"([0-9]{8})_([0-9]{4})\.h5")
+_fmt_hfb = re.compile(r"hfb_([0-9]{8})_([0-9]{4})\.h5")
+_fmt_hk = re.compile(r"([A-Za-z]*)_([0-9]{8})\.h5")
+_fmt_hkp = re.compile(r"hkp_prom_([0-9]{8})\.h5")
+_fmt_atmel = re.compile(r"atmel_id\.dat")
+_fmt_log = re.compile(r"ch_(master|hk)\.log")
+_fmt_rawadc = re.compile(r"rawadc\.npy")
+_fmt_rawadc_hist = re.compile(r"histogram_chan([0-9]{1,2})\.pdf")
+_fmt_rawadc_spec = re.compile(r"spectrum_chan([0-9]{1,2})\.pdf")
+_fmt_rawadc_h5 = re.compile(r"[0-9]{6}\.h5")
+_fmt_raw_gains = re.compile(r"(gains|gains_noisy)\.pkl")
+_fmt_weather = re.compile(r"(20[12][0-9][01][0-9][0123][0-9])\.h5")
 _fmt_calib_data = re.compile(r"\d{8}\.h5")
 _fmt_misc_tar = re.compile(
-    "([0-9]{8})_([A-Za-z][A-Za-z0-9_+-]*)\.misc\.tar(?:\.gz|\.bz2|\.xz)"
+    r"([0-9]{8})_([A-Za-z][A-Za-z0-9_+-]*)\.misc\.tar(?:\.gz|\.bz2|\.xz)"
 )
 
 
