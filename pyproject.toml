@@ -1,6 +1,6 @@
 [build-system]
 requires = ["setuptools>=61.0.0", "wheel", "setuptools-git-versioning"]
-build-backed = "setuptools.build_meta"
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "chimedb.data_index"
@@ -8,7 +8,7 @@ authors = [
   {name = "D. V. Wiebe for the CHIME Collaboration", email = "dvw@phas.ubc.ca"}
 ]
 description = "CHIME data index (alpenhorn) ORM"
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 dynamic = ["readme", "version"]
 license = {file = "LICENSE"}
 dependencies = [
