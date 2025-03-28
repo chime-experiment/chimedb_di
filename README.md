@@ -41,10 +41,6 @@ The `chimedb.data_index.orm` module also defines:
 * file_info_table
 
 The `chimedb.data_index.util` module defines a few utility functions:
-* detect_file_type
-* md5sum_file
-* parse_acq_name
-* parse_corrfile_name
-* parse_hkfile_name
-* parse_weatherfile_name
-* populate_types
+* update_types
+* update_inst
+* update_storage
