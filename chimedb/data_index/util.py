@@ -113,6 +113,12 @@ def update_types():
             "21cm absorber (Hyper Fine Beam) data taken from a correlator.",
             "HFBAcqInfo",
         ),
+        at(
+            12,
+            "hfbcomp",
+            "Compressed absorber data from a correlator.",
+            "HFBAcqInfo",
+        ),
     ]
 
     for acqtype in acqtypes:
@@ -196,6 +202,7 @@ def update_types():
         ("gain", "calibration"),
         ("flaginput", "calibration"),
         ("hfb", "hfb"),
+        ("hfbcomp", "hfb"),
     ]:
         at = AcqType.get(name=names[0])
         ft = FileType.get(name=names[1])
