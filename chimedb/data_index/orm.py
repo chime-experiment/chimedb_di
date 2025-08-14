@@ -406,7 +406,7 @@ class HFBAcqInfo(CHIMEAcqInfo):
     nbeam : integer
         Number of beams in acquisition.
     compressed : bool
-        True if this is a compressed HFB acquisition.
+        True if this is an HFB acquisition with compressed weights.
     """
 
     integration = pw.DoubleField(null=True)
