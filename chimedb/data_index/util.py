@@ -116,7 +116,7 @@ def update_types():
         at(
             12,
             "hfbcomp",
-            "Compressed absorber data from a correlator.",
+            "Absorber data with compressed weights from a correlator.",
             "HFBAcqInfo",
         ),
     ]
