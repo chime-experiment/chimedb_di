@@ -838,6 +838,20 @@ class CalibrationGainFileInfo(CalibrationFileInfo):
     """
 
 
+class TimingCorrectionFileInfo(CalibrationFileInfo):
+    """Timing correction file info.
+
+    Attributes
+    ----------
+    file : foreign key
+        Reference to the file this information is about.
+    start_time : float
+        Start of data in the file in UNIX time.
+    finish_time : float
+        End of data in the file in UNIX time.
+    """
+
+
 class FlagInputFileInfo(CalibrationFileInfo):
     """Flag input file info.
 
