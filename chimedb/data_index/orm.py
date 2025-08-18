@@ -405,13 +405,15 @@ class HFBAcqInfo(CHIMEAcqInfo):
         Number of sub-frequencies in acquisition.
     nbeam : integer
         Number of beams in acquisition.
-
+    compressed : bool
+        True if this is an HFB acquisition with compressed weights.
     """
 
     integration = pw.DoubleField(null=True)
     nfreq = pw.IntegerField(null=True)
     nsubfreq = pw.IntegerField(null=True)
     nbeam = pw.IntegerField(null=True)
+    compressed = pw.BooleanField(default=False)
 
     def _info_from_file(self, file):
         """Return HFB corr acq info from a file in the acq.
@@ -436,11 +438,19 @@ class HFBAcqInfo(CHIMEAcqInfo):
             n_sub_freq = len(f["/index_map/subfreq"])
             n_beam = len(f["/index_map/beam"])
 
+            # Is this a compressed acq?
+            compressed = True
+            for name in ("weight_beam", "weight_norm", "weight_subf"):
+                if name not in f.keys():
+                    compressed = False
+                    break
+
         return {
             "integration": integration,
             "nfreq": n_freq,
             "nsubfreq": n_sub_freq,
             "nbeam": n_beam,
+            "compressed": compressed,
         }
 
 
@@ -618,11 +628,9 @@ class CHIMEFileInfo(InfoBase):
             # Open the file
             with node.io.open(path) as file:
                 # Get keywords from file
-                info = self._info_from_file(file)
-        else:
-            info = dict()
+                return self._info_from_file(file) | name_data
 
-        return info | name_data
+        return name_data
 
 
 # File Info Tables
@@ -684,12 +692,15 @@ class HFBFileInfo(CHIMEFileInfo):
         Start of acquisition in UNIX time.
     finish_time : float
         End of acquisition in UNIX time.
+    compressed : bool
+        True if this file has compressed weights.
     """
 
     start_time = pw.DoubleField(null=True)
     finish_time = pw.DoubleField(null=True)
     chunk_number = pw.IntegerField(null=True)
     freq_number = pw.IntegerField(null=True)
+    compressed = pw.BooleanField(default=False)
 
     def _info_from_file(self, file):
         """Get HFB file info.
@@ -705,9 +716,17 @@ class HFBFileInfo(CHIMEFileInfo):
             start_time = f["/index_map/time"][0][1]
             finish_time = f["/index_map/time"][-1][1]
 
+            # Is this a compressed file?
+            compressed = True
+            for name in ("weight_beam", "weight_norm", "weight_subf"):
+                if name not in f.keys():
+                    compressed = False
+                    break
+
         return {
             "start_time": start_time,
             "finish_time": finish_time,
+            "compressed": compressed,
         }
 
 
