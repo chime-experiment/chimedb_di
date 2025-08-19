@@ -194,6 +194,11 @@ class AcqType(name_table):
         """For getting the digitalgain acquisition type."""
         return cls.from_name("digitalgain")
 
+    @classmethod
+    def timing(cls):
+        """For getting the timing correction acquisition type."""
+        return cls.from_name("timing")
+
 
 class ArchiveAcq(base_model):
     """Describe the acquisition.
