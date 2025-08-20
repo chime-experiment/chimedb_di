@@ -25,6 +25,7 @@ from .orm import (
     RawadcFileInfo as RawadcFileInfo,
     StorageGroup as StorageGroup,
     StorageNode as StorageNode,
+    TimingCorrectionFileInfo as TimingCorrectionFileInfo,
     WeatherFileInfo as WeatherFileInfo,
 )
 

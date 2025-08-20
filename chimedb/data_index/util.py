@@ -119,6 +119,12 @@ def update_types():
             "Absorber data with compressed weights from a correlator.",
             "HFBAcqInfo",
         ),
+        at(
+            13,
+            "timing",
+            "Timing corrections from the calibration broker.",
+            None,
+        ),
     ]
 
     for acqtype in acqtypes:
@@ -203,6 +209,7 @@ def update_types():
         ("flaginput", "calibration"),
         ("hfb", "hfb"),
         ("hfbcomp", "hfb"),
+        ("timing", "calibration"),
     ]:
         at = AcqType.get(name=names[0])
         ft = FileType.get(name=names[1])

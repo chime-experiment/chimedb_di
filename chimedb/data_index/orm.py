@@ -194,6 +194,11 @@ class AcqType(name_table):
         """For getting the digitalgain acquisition type."""
         return cls.from_name("digitalgain")
 
+    @classmethod
+    def timing(cls):
+        """For getting the timing correction acquisition type."""
+        return cls.from_name("timing")
+
 
 class ArchiveAcq(base_model):
     """Describe the acquisition.
@@ -826,6 +831,20 @@ class DigitalGainFileInfo(CalibrationFileInfo):
 
 class CalibrationGainFileInfo(CalibrationFileInfo):
     """Gain data file info.
+
+    Attributes
+    ----------
+    file : foreign key
+        Reference to the file this information is about.
+    start_time : float
+        Start of data in the file in UNIX time.
+    finish_time : float
+        End of data in the file in UNIX time.
+    """
+
+
+class TimingCorrectionFileInfo(CalibrationFileInfo):
+    """Timing correction file info.
 
     Attributes
     ----------
