@@ -2,23 +2,23 @@ name: test-chimedb.data_index
 on:
   pull_request:
     branches:
-    - master
+    - main
   push:
     branches:
-    - master
+    - main
 
 jobs:
   run-tests:
     strategy:
       matrix:
-        python-version: ["3.10", "3.13"]
+        python-version: ["3.10", "3.14"]
 
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: ${{ matrix.python-version }}
 
