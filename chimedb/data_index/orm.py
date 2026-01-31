@@ -10,7 +10,6 @@ import peewee as pw
 
 from chimedb.core.orm import base_model, name_table, EnumField, JSONDictField
 
-
 # Logging
 # =======
 _logger = logging.getLogger("chimedb")
