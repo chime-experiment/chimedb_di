@@ -10,6 +10,7 @@ from chimedb.data_index.orm import (
     FileType,
     StorageNode,
     StorageGroup,
+    StorageHost,
     StorageTransferAction,
 )
 
@@ -39,6 +40,7 @@ def tables(proxy):
             FileType,
             StorageNode,
             StorageGroup,
+            StorageHost,
             StorageTransferAction,
         ]
     )

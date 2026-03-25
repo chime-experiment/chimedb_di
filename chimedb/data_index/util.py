@@ -23,6 +23,7 @@ from .orm import (
     ArchiveInst,
     FileType,
     StorageNode,
+    StorageHost,
     StorageGroup,
     StorageTransferAction,
 )
@@ -510,9 +511,51 @@ def update_storage():
     This sets up the standard CHIME dataflow.
     """
 
-    # node and group caches
+    # object dicts used for foreign-key look-ups
     node_dict = dict()
     group_dict = dict()
+    host_dict = dict()
+
+    def _host(id_, name, address, username, notes):
+        """Creates a dict for a host."""
+        return {
+            "id": id_,
+            "name": name,
+            "address": address,
+            "username": username,
+            "notes": notes,
+        }
+
+    hosts = [
+        _host(
+            1,
+            "drao",
+            "hac1-nren.chimenet.ca",
+            "chimeadmin",
+            "At the CHIME telescope.  Data is stored on gong, but the daemon runs on wind.",
+        ),
+        _host(
+            2,
+            "fir",
+            "robot.fir.alliancecan.ca",
+            "chimedat",
+            "WestGrid compute cluster.",
+        ),
+        _host(
+            3,
+            "scinet",
+            "robot3.scinet.utoronto.ca",
+            "chimedat",
+            "SciNet compute cluster.  Access via trillium.",
+        ),
+    ]
+
+    # Create hosts, if necessary
+    for host in hosts:
+        try:
+            host_dict[host["name"]] = StorageHost.get(id=host["id"])
+        except StorageHost.DoesNotExist:
+            host_dict[host["name"]] = StorageHost.create(**host)
 
     def _group(id_, name, io_class, notes):
         """Creates a dict for a group."""
@@ -524,14 +567,9 @@ def update_storage():
         ),
         _group(5, "scinet_hpss", None, "HPSS archival storage at SciNet."),
         _group(7, "drao_storage", None, "Current storage on gong."),
-        _group(
-            9, "cedar_offload", None, "Queue of files waiting to be moved to nearline"
-        ),
-        _group(14, "cedar_online", None, "Archive for active data analysis on cedar."),
-        _group(
-            15, "cedar_staging", None, "Temporary storage for incoming data on cedar."
-        ),
-        _group(16, "cedar_nearline", "LustreHSM", "Nearline archival storage at cedar"),
+        _group(14, "fir_online", None, "Archive for active data analysis on fir."),
+        _group(15, "fir_staging", None, "Temporary storage for incoming data on fir."),
+        _group(16, "fir_nearline", "LustreHSM", "Nearline archival storage at fir."),
     ]
 
     # Create groups, if necessary
@@ -545,9 +583,10 @@ def update_storage():
         id_,
         name,
         group,
+        host=None,
         io_class=None,
         auto_import=False,
-        storage_type="F",
+        archive=False,
         notes=None,
         io_config=None,
     ):
@@ -557,9 +596,10 @@ def update_storage():
             "name": name,
             "io_class": io_class,
             "group": group_dict[group],
+            "host": host_dict.get(host, None),
             "active": False,
+            "archive": archive,
             "auto_import": auto_import,
-            "storage_type": storage_type,
             "notes": notes,
             "io_config": io_config,
         }
@@ -569,40 +609,50 @@ def update_storage():
             11,
             "gong",
             "drao_storage",
+            host="drao",
             io_class="Polling",
             auto_import=True,
-            storage_type="A",
+            archive=True,
         ),
-        _node(1117, "cedar_offload", "cedar_offload", storage_type="A"),
         _node(
             1119,
             "scinet_hpss",
             "scinet_hpss",
-            storage_type="A",
+            host="scinet",
+            archive=True,
             notes="HPSS tape storage node at SciNet.",
         ),
-        _node(1133, "scinet_staging", "scinet_staging", notes="Staging on Niagara"),
+        _node(
+            1133,
+            "scinet_staging",
+            "scinet_staging",
+            host="scinet",
+            notes="Staging on SciNet",
+        ),
         _node(
             1136,
-            "cedar_online",
-            "cedar_online",
+            "fir_online",
+            "fir_online",
+            host="fir",
             io_class="LustreQuota",
             io_config='{"quota_group": "rpp-chime"}',
         ),
-        _node(1137, "cedar_staging", "cedar_staging"),
+        _node(1137, "fir_staging", "fir_staging", host="fir"),
         _node(
             1139,
-            "cedar_nearline",
-            "cedar_nearline",
+            "fir_nearline",
+            "fir_nearline",
             io_class="LustreHSM",
-            storage_type="A",
+            host="fir",
+            archive=True,
             io_config='{"quota_group": "rpp-chime", "fixed_quota": 300000000000, "headroom": 25000000000, "release_check_count": 100}',
         ),
         _node(
             1142,
-            "cedar_smallfile",
-            "cedar_nearline",
-            storage_type="A",
+            "fir_smallfile",
+            "fir_nearline",
+            host="fir",
+            archive=True,
             notes="Archival storage for files too small for nearline",
         ),
     ]
@@ -619,17 +669,13 @@ def update_storage():
         return (node_dict[node_from], group_dict[group_to], autosync, autoclean)
 
     actions = [
-        # files appearing on gong are automatically transferred to cedar_staging
-        _action("gong", "cedar_staging", True, False),
-        # files arriving on cedar_staging are automatically transferred to cedar_offload
-        _action("cedar_staging", "cedar_offload", True, False),
-        # files arriving on cedar_staging are automatically transferred to scinet_staging
-        _action("cedar_staging", "scinet_staging", True, False),
-        # files are deleted from cedar_staging after being archived in HPSS on scinet
-        _action("cedar_staging", "scinet_hpss", False, True),
-        # files arriving on cedar_offload are automatically transferred to nearline,
+        # files appearing on gong are automatically transferred to fir_staging
+        _action("gong", "fir_staging", True, False),
+        # files arriving on fir_staging are automatically transferred to nearline,
         # and then deleted once they're in nearline
-        _action("cedar_offload", "cedar_nearline", True, True),
+        _action("fir_staging", "fir_nearline", True, True),
+        # files arriving on fir_nearline are automatically transferred to scinet_staging
+        _action("fir_nearline", "scinet_staging", True, False),
         # files arriving on scinet_staging are automatically transferred to HPSS,
         # and then deleted once they're in HPSS
         _action("scinet_staging", "scinet_hpss", True, True),

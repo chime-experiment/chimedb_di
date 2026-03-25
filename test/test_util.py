@@ -5,6 +5,7 @@ from chimedb.data_index.orm import (
     AcqType,
     FileType,
     AcqFileTypes,
+    StorageHost,
     StorageGroup,
     StorageNode,
     StorageTransferAction,
@@ -56,35 +57,35 @@ def test_update_storage(tables):
     util.update_storage()
 
     # Check
+    for host in ["drao", "fir", "scinet"]:
+        StorageHost.get(name=host)
+
     for group in [
         "scinet_staging",
         "scinet_hpss",
         "drao_storage",
-        "cedar_offload",
-        "cedar_online",
-        "cedar_staging",
-        "cedar_nearline",
+        "fir_online",
+        "fir_staging",
+        "fir_nearline",
     ]:
         StorageGroup.get(name=group)
 
     for node in [
         "gong",
-        "cedar_offload",
-        "cedar_staging",
-        "cedar_smallfile",
-        "cedar_nearline",
-        "cedar_online",
+        "fir_staging",
+        "fir_smallfile",
+        "fir_nearline",
+        "fir_online",
         "scinet_staging",
         "scinet_hpss",
     ]:
-        StorageNode.get(name=node)
+        node = StorageNode.get(name=node)
+        assert node.host is not None
 
     edges = [
-        ("gong", "cedar_staging", True, False),
-        ("cedar_staging", "cedar_offload", True, False),
-        ("cedar_staging", "scinet_staging", True, False),
-        ("cedar_staging", "scinet_hpss", False, True),
-        ("cedar_offload", "cedar_nearline", True, True),
+        ("gong", "fir_staging", True, False),
+        ("fir_staging", "fir_nearline", True, True),
+        ("fir_nearline", "scinet_staging", True, False),
         ("scinet_staging", "scinet_hpss", True, True),
     ]
 
